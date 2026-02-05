@@ -11,10 +11,37 @@ async function tryFetchFromTable(tableName: string) {
 }
 
 export default async function ItemsPage() {
+  // Check if environment variables are set
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  
+  if (!supabaseUrl || !supabaseKey) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
+        <main className="w-full max-w-3xl px-6">
+          <div className="rounded-lg border border-red-300 bg-red-50 p-4 text-red-800 dark:bg-red-900/20 dark:text-red-400">
+            <h2 className="text-xl font-bold mb-2">Missing Environment Variables</h2>
+            <p className="mb-2">Supabase credentials are not configured.</p>
+            <div className="mt-4 text-sm space-y-2">
+              <p className="font-semibold">To fix this in Vercel:</p>
+              <ol className="list-decimal list-inside space-y-1 ml-2">
+                <li>Go to Vercel Dashboard → Your Project → Settings → Environment Variables</li>
+                <li>Add <code className="bg-red-100 dark:bg-red-900/40 px-1 rounded">NEXT_PUBLIC_SUPABASE_URL</code> = <code className="bg-red-100 dark:bg-red-900/40 px-1 rounded">https://qihsgnfjqmkjmoowyfbn.supabase.co</code></li>
+                <li>Add <code className="bg-red-100 dark:bg-red-900/40 px-1 rounded">NEXT_PUBLIC_SUPABASE_ANON_KEY</code> with your anon key</li>
+                <li>Redeploy your project</li>
+              </ol>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   // Try each common table name until we find one that works
   let data: any[] | null = null;
   let error: any = null;
   let workingTable = "";
+  const errors: Array<{ table: string; error: string }> = [];
 
   for (const tableName of COMMON_TABLES) {
     const result = await tryFetchFromTable(tableName);
@@ -22,6 +49,9 @@ export default async function ItemsPage() {
       data = result.data;
       workingTable = tableName;
       break;
+    }
+    if (result.error) {
+      errors.push({ table: tableName, error: result.error.message });
     }
     // If this is the last table and it failed, save the error
     if (tableName === COMMON_TABLES[COMMON_TABLES.length - 1]) {
@@ -37,11 +67,19 @@ export default async function ItemsPage() {
             <h2 className="text-xl font-bold mb-2">Error loading data</h2>
             <p className="mb-2 font-mono text-sm">{error.message}</p>
             <div className="mt-4 text-sm space-y-2">
-              <p className="font-semibold">To fix this:</p>
+              <p className="font-semibold">Tried tables:</p>
+              <ul className="list-disc list-inside space-y-1 ml-2">
+                {errors.map((e, i) => (
+                  <li key={i} className="font-mono text-xs">
+                    {e.table}: {e.error}
+                  </li>
+                ))}
+              </ul>
+              <p className="font-semibold mt-4">Possible issues:</p>
               <ol className="list-decimal list-inside space-y-1 ml-2">
-                <li>Go to your Supabase Dashboard → Table Editor</li>
-                <li>Find the name of an existing table</li>
-                <li>Add that table name to the <code className="bg-red-100 dark:bg-red-900/40 px-1 rounded">COMMON_TABLES</code> array in <code className="bg-red-100 dark:bg-red-900/40 px-1 rounded">src/app/items/page.tsx</code> (line 6)</li>
+                <li>Environment variables not set in Vercel (check Settings → Environment Variables)</li>
+                <li>Table names don&apos;t match - check Supabase Dashboard → Table Editor for actual table names</li>
+                <li>Row Level Security (RLS) policies might be blocking access - check Supabase Dashboard → Authentication → Policies</li>
               </ol>
             </div>
           </div>
