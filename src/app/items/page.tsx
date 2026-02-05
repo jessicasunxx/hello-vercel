@@ -2,8 +2,8 @@ import { supabase } from "@/lib/supabaseClient";
 
 export const dynamic = "force-dynamic"; // Ensures fresh data on each request
 
-// Common table names to try - update this with your actual table name
-const COMMON_TABLES = ["todos", "items", "products", "messages", "posts", "users"];
+// Pre-existing Supabase table names
+const COMMON_TABLES = ["postgres_table_0", "postgres_table_1", "postgres_table_2", "postgres_table_3"];
 
 async function tryFetchFromTable(tableName: string) {
   const { data, error } = await supabase.from(tableName).select("*").limit(100);
