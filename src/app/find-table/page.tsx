@@ -5,16 +5,27 @@ export const dynamic = "force-dynamic";
 export default async function FindTablePage() {
   // Try to query information_schema to get table names
   // Note: This might not work with anon key, but worth trying
-  const { data: schemaData, error: schemaError } = await supabase
-    .rpc("get_table_names")
-    .catch(() => ({ data: null, error: { message: "RPC function not available" } }));
+  let schemaData = null;
+  let schemaError = { message: "RPC function not available" };
+  try {
+    const result = await supabase.rpc("get_table_names");
+    schemaData = result.data;
+    schemaError = result.error || null;
+  } catch {
+    // RPC function not available
+  }
 
   // Also try a direct query to information_schema (usually requires service_role key)
-  const { data: tablesData } = await supabase
-    .from("information_schema.tables")
-    .select("table_name")
-    .eq("table_schema", "public")
-    .catch(() => ({ data: null }));
+  let tablesData = null;
+  try {
+    const result = await supabase
+      .from("information_schema.tables")
+      .select("table_name")
+      .eq("table_schema", "public");
+    tablesData = result.data;
+  } catch {
+    // Query not available
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
