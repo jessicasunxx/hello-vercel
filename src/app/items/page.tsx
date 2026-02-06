@@ -2,8 +2,9 @@ import { getSupabaseServerClient } from "@/lib/supabaseClient";
 
 export const dynamic = "force-dynamic"; // Ensures fresh data on each request
 
-// Pre-existing Supabase table names
-const COMMON_TABLES = ["postgres_table_0", "postgres_table_1", "postgres_table_2", "postgres_table_3"];
+// Class database tables (pre-existing)
+// If you don't have access to one of these, Supabase will return an RLS/permission error.
+const COMMON_TABLES = ["images", "captions", "caption_votes", "profiles"];
 
 async function tryFetchFromTable(supabase: any, tableName: string) {
   const { data, error } = await supabase.from(tableName).select("*").limit(100);

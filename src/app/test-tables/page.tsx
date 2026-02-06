@@ -2,18 +2,13 @@ import { getSupabaseServerClient } from "@/lib/supabaseClient";
 
 export const dynamic = "force-dynamic";
 
-// Common table names to try
+// Common class database table names to try
 const COMMON_TABLES = [
-  "todos",
-  "products",
-  "items",
   "messages",
-  "posts",
-  "users",
-  "customers",
-  "orders",
-  "notes",
-  "tasks",
+  "images",
+  "captions",
+  "caption_votes",
+  "profiles",
 ];
 
 export default async function TestTablesPage() {
