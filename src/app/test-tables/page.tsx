@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabaseClient";
+import { getSupabaseServerClient } from "@/lib/supabaseClient";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +17,46 @@ const COMMON_TABLES = [
 ];
 
 export default async function TestTablesPage() {
+  const { supabase, env, error: envError } = getSupabaseServerClient();
+
+  if (!supabase || envError) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
+        <main className="w-full max-w-3xl px-6 py-8">
+          <div className="rounded-lg border border-red-300 bg-red-50 p-4 text-red-800 dark:bg-red-900/20 dark:text-red-400">
+            <h2 className="text-xl font-bold mb-2">Supabase not configured</h2>
+            <p className="mb-2">{envError}</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  const hasMismatch =
+    Boolean(env.urlRef) && Boolean(env.keyRef) && env.urlRef !== env.keyRef;
+
+  if (hasMismatch) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
+        <main className="w-full max-w-3xl px-6 py-8">
+          <div className="rounded-lg border border-red-300 bg-red-50 p-4 text-red-800 dark:bg-red-900/20 dark:text-red-400">
+            <h2 className="text-xl font-bold mb-2">Supabase URL / key mismatch</h2>
+            <p className="mb-2">
+              URL project:{" "}
+              <code className="bg-red-100 dark:bg-red-900/40 px-1 rounded">
+                {env.urlRef}
+              </code>{" "}
+              — Key project:{" "}
+              <code className="bg-red-100 dark:bg-red-900/40 px-1 rounded">
+                {env.keyRef}
+              </code>
+            </p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   const results = await Promise.allSettled(
     COMMON_TABLES.map(async (tableName) => {
       const { data, error } = await supabase

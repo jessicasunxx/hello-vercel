@@ -1,27 +1,25 @@
-import { supabase } from "@/lib/supabaseClient";
+import { getSupabaseServerClient } from "@/lib/supabaseClient";
 
 export const dynamic = "force-dynamic"; // Ensures fresh data on each request
 
 // Pre-existing Supabase table names
 const COMMON_TABLES = ["postgres_table_0", "postgres_table_1", "postgres_table_2", "postgres_table_3"];
 
-async function tryFetchFromTable(tableName: string) {
+async function tryFetchFromTable(supabase: any, tableName: string) {
   const { data, error } = await supabase.from(tableName).select("*").limit(100);
   return { tableName, data, error };
 }
 
 export default async function ItemsPage() {
-  // Check if environment variables are set
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  
-  if (!supabaseUrl || !supabaseKey) {
+  const { supabase, env, error: envError } = getSupabaseServerClient();
+
+  if (!supabase || envError) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
         <main className="w-full max-w-3xl px-6">
           <div className="rounded-lg border border-red-300 bg-red-50 p-4 text-red-800 dark:bg-red-900/20 dark:text-red-400">
-            <h2 className="text-xl font-bold mb-2">Missing Environment Variables</h2>
-            <p className="mb-2">Supabase credentials are not configured.</p>
+            <h2 className="text-xl font-bold mb-2">Supabase not configured</h2>
+            <p className="mb-2">{envError}</p>
             <div className="mt-4 text-sm space-y-2">
               <p className="font-semibold">To fix this in Vercel:</p>
               <ol className="list-decimal list-inside space-y-1 ml-2">
@@ -37,6 +35,46 @@ export default async function ItemsPage() {
     );
   }
 
+  const hasMismatch =
+    Boolean(env.urlRef) && Boolean(env.keyRef) && env.urlRef !== env.keyRef;
+
+  if (hasMismatch) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
+        <main className="w-full max-w-3xl px-6">
+          <div className="rounded-lg border border-red-300 bg-red-50 p-4 text-red-800 dark:bg-red-900/20 dark:text-red-400">
+            <h2 className="text-xl font-bold mb-2">Supabase URL / key mismatch</h2>
+            <p className="mb-3">
+              Your Supabase URL points to project{" "}
+              <code className="bg-red-100 dark:bg-red-900/40 px-1 rounded">
+                {env.urlRef}
+              </code>{" "}
+              but your anon key belongs to project{" "}
+              <code className="bg-red-100 dark:bg-red-900/40 px-1 rounded">
+                {env.keyRef}
+              </code>
+              .
+            </p>
+            <div className="text-sm space-y-2">
+              <p className="font-semibold">Fix in Vercel:</p>
+              <ol className="list-decimal list-inside space-y-1 ml-2">
+                <li>
+                  In Vercel env vars, delete old <code className="bg-red-100 dark:bg-red-900/40 px-1 rounded">SUPABASE_URL</code> /{" "}
+                  <code className="bg-red-100 dark:bg-red-900/40 px-1 rounded">SUPABASE_ANON_KEY</code> (or make sure they match).
+                </li>
+                <li>
+                  Set <code className="bg-red-100 dark:bg-red-900/40 px-1 rounded">{env.source.url}</code> and{" "}
+                  <code className="bg-red-100 dark:bg-red-900/40 px-1 rounded">{env.source.anonKey}</code> from the <strong>same</strong> Supabase project.
+                </li>
+                <li>Redeploy.</li>
+              </ol>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   // Try each common table name until we find one that works
   let data: any[] | null = null;
   let error: any = null;
@@ -44,7 +82,7 @@ export default async function ItemsPage() {
   const errors: Array<{ table: string; error: string }> = [];
 
   for (const tableName of COMMON_TABLES) {
-    const result = await tryFetchFromTable(tableName);
+    const result = await tryFetchFromTable(supabase, tableName);
     if (!result.error && result.data) {
       data = result.data;
       workingTable = tableName;
