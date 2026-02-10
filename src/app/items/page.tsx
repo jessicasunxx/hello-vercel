@@ -1,4 +1,5 @@
 import { getSupabaseServerClient } from "@/lib/supabaseClient";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic"; // Ensures fresh data on each request
 
@@ -6,13 +7,45 @@ export const dynamic = "force-dynamic"; // Ensures fresh data on each request
 // If you don't have access to one of these, Supabase will return an RLS/permission error.
 const COMMON_TABLES = ["images", "captions", "caption_votes", "profiles"];
 
-async function tryFetchFromTable(supabase: any, tableName: string) {
-  const { data, error } = await supabase.from(tableName).select("*").limit(100);
-  return { tableName, data, error };
+const PAGE_SIZE = 24;
+
+function getPage(searchParams: Record<string, string | string[] | undefined> | undefined) {
+  const raw = searchParams?.page;
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  const page = Number.parseInt(value ?? "1", 10);
+  return Number.isFinite(page) && page > 0 ? page : 1;
 }
 
-export default async function ItemsPage() {
+async function checkTableAccessible(supabase: any, tableName: string) {
+  const { error } = await supabase.from(tableName).select("*").limit(1);
+  return { tableName, error };
+}
+
+async function fetchTablePage(supabase: any, tableName: string, page: number) {
+  const from = (page - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+
+  // Prefer consistent ordering for images (others may not have created_datetime_utc)
+  const query =
+    tableName === "images"
+      ? supabase
+          .from(tableName)
+          .select("*")
+          .order("created_datetime_utc", { ascending: false })
+          .range(from, to)
+      : supabase.from(tableName).select("*").range(from, to);
+
+  const { data, error } = await query;
+  return { data: (data as any[]) ?? null, error };
+}
+
+export default async function ItemsPage({
+  searchParams,
+}: {
+  searchParams?: Record<string, string | string[] | undefined>;
+}) {
   const { supabase, env, error: envError } = getSupabaseServerClient();
+  const page = getPage(searchParams);
 
   if (!supabase || envError) {
     return (
@@ -77,15 +110,13 @@ export default async function ItemsPage() {
   }
 
   // Try each common table name until we find one that works
-  let data: any[] | null = null;
   let error: any = null;
   let workingTable = "";
   const errors: Array<{ table: string; error: string }> = [];
 
   for (const tableName of COMMON_TABLES) {
-    const result = await tryFetchFromTable(supabase, tableName);
-    if (!result.error && result.data) {
-      data = result.data;
+    const result = await checkTableAccessible(supabase, tableName);
+    if (!result.error) {
       workingTable = tableName;
       break;
     }
@@ -121,6 +152,21 @@ export default async function ItemsPage() {
                 <li>Row Level Security (RLS) policies might be blocking access - check Supabase Dashboard → Authentication → Policies</li>
               </ol>
             </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  const pageResult = await fetchTablePage(supabase, workingTable, page);
+  const data = pageResult.data;
+  if (pageResult.error) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
+        <main className="w-full max-w-3xl px-6">
+          <div className="rounded-lg border border-red-300 bg-red-50 p-4 text-red-800 dark:bg-red-900/20 dark:text-red-400">
+            <h2 className="text-xl font-bold mb-2">Error loading page</h2>
+            <p className="mb-2 font-mono text-sm">{pageResult.error.message}</p>
           </div>
         </main>
       </div>
@@ -165,6 +211,32 @@ export default async function ItemsPage() {
           </div>
 
           {/* Grid */}
+          <div className="flex items-center justify-between mb-6">
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              Page <span className="font-semibold text-zinc-900 dark:text-zinc-100">{page}</span>
+              {" "}• showing up to {PAGE_SIZE} results
+            </p>
+            <div className="flex gap-2">
+              <Link
+                href={`/items?page=${Math.max(1, page - 1)}`}
+                aria-disabled={page <= 1}
+                className={`rounded-lg px-3 py-2 text-sm border transition-colors ${
+                  page <= 1
+                    ? "pointer-events-none opacity-50 border-zinc-200 dark:border-zinc-800 text-zinc-500"
+                    : "border-zinc-200 dark:border-zinc-800 hover:bg-white/60 dark:hover:bg-zinc-900/60"
+                }`}
+              >
+                Prev
+              </Link>
+              <Link
+                href={`/items?page=${page + 1}`}
+                className="rounded-lg px-3 py-2 text-sm border border-zinc-200 dark:border-zinc-800 hover:bg-white/60 dark:hover:bg-zinc-900/60 transition-colors"
+              >
+                Next
+              </Link>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {data.map((image: any, index: number) => (
               <div
@@ -254,7 +326,7 @@ export default async function ItemsPage() {
           Items from Supabase
         </h1>
         <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">
-          Table: <code className="bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded">{workingTable}</code>
+          Table: <code className="bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded">{workingTable}</code> • Page {page}
         </p>
         <div className="space-y-4">
           {data.map((row, index) => (
