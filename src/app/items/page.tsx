@@ -145,6 +145,73 @@ export default async function ItemsPage() {
     );
   }
 
+  // Render images table with a nicer display
+  if (workingTable === "images") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
+        <main className="w-full max-w-6xl px-6 py-8">
+          <h1 className="text-3xl font-bold text-black dark:text-zinc-50 mb-2">
+            Images from Supabase
+          </h1>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6">
+            Table: <code className="bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded">{workingTable}</code> • {data.length} image{data.length !== 1 ? "s" : ""}
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {data.map((image: any) => (
+              <div
+                key={image.id}
+                className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-4 bg-white dark:bg-zinc-900 shadow-sm hover:shadow-md transition-shadow"
+              >
+                {image.url && (
+                  <div className="mb-4 rounded-lg overflow-hidden">
+                    <img
+                      src={image.url}
+                      alt={image.image_description || "Image"}
+                      className="w-full h-48 object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                  </div>
+                )}
+                <div className="space-y-2">
+                  {image.image_description && (
+                    <p className="text-sm text-zinc-700 dark:text-zinc-300 line-clamp-2">
+                      {image.image_description}
+                    </p>
+                  )}
+                  {image.additional_context && (
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-2">
+                      {image.additional_context}
+                    </p>
+                  )}
+                  <div className="flex items-center gap-2 text-xs text-zinc-400 dark:text-zinc-500">
+                    {image.is_public && (
+                      <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded">
+                        Public
+                      </span>
+                    )}
+                    {image.is_common_use && (
+                      <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded">
+                        Common Use
+                      </span>
+                    )}
+                  </div>
+                  {image.created_datetime_utc && (
+                    <p className="text-xs text-zinc-400 dark:text-zinc-500">
+                      Created: {new Date(image.created_datetime_utc).toLocaleDateString()}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // Render other tables in a clean card format
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
       <main className="w-full max-w-4xl px-6 py-8">
