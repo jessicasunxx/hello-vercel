@@ -214,23 +214,27 @@ export default async function ItemsPage({
           <div className="flex items-center justify-between mb-6">
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
               Page <span className="font-semibold text-zinc-900 dark:text-zinc-100">{page}</span>
-              {" "}• showing up to {PAGE_SIZE} results
+              {" "}• showing {data.length} result{data.length !== 1 ? "s" : ""}
             </p>
             <div className="flex gap-2">
               <Link
                 href={`/items?page=${Math.max(1, page - 1)}`}
                 aria-disabled={page <= 1}
-                className={`rounded-lg px-3 py-2 text-sm border transition-colors ${
+                className={`rounded-lg px-4 py-2 text-sm font-medium border transition-colors ${
                   page <= 1
-                    ? "pointer-events-none opacity-50 border-zinc-200 dark:border-zinc-800 text-zinc-500"
-                    : "border-zinc-200 dark:border-zinc-800 hover:bg-white/60 dark:hover:bg-zinc-900/60"
+                    ? "pointer-events-none opacity-50 border-zinc-200 dark:border-zinc-800 text-zinc-500 cursor-not-allowed"
+                    : "border-zinc-200 dark:border-zinc-800 hover:bg-white/60 dark:hover:bg-zinc-900/60 text-zinc-700 dark:text-zinc-300"
                 }`}
               >
                 Prev
               </Link>
               <Link
                 href={`/items?page=${page + 1}`}
-                className="rounded-lg px-3 py-2 text-sm border border-zinc-200 dark:border-zinc-800 hover:bg-white/60 dark:hover:bg-zinc-900/60 transition-colors"
+                className={`rounded-lg px-4 py-2 text-sm font-medium border transition-colors ${
+                  data.length < PAGE_SIZE
+                    ? "pointer-events-none opacity-50 border-zinc-200 dark:border-zinc-800 text-zinc-500 cursor-not-allowed"
+                    : "border-zinc-200 dark:border-zinc-800 hover:bg-white/60 dark:hover:bg-zinc-900/60 text-zinc-700 dark:text-zinc-300"
+                }`}
               >
                 Next
               </Link>
@@ -274,9 +278,13 @@ export default async function ItemsPage({
 
                 {/* Content */}
                 <div className="p-5 space-y-3">
-                  {image.image_description && (
+                  {image.image_description ? (
                     <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 leading-snug" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                       {image.image_description}
+                    </h3>
+                  ) : (
+                    <h3 className="text-sm font-medium text-zinc-400 dark:text-zinc-500 italic">
+                      No description available
                     </h3>
                   )}
                   
