@@ -1,5 +1,6 @@
 import { getSupabaseServerClient } from "@/lib/supabaseClient";
 import Link from "next/link";
+import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic"; // Ensures fresh data on each request
 
@@ -9,6 +10,17 @@ const COMMON_TABLES = ["images", "captions", "caption_votes", "profiles"];
 
 const PAGE_SIZE = 24;
 
+type TableRow = {
+  id?: string | number;
+  url?: string;
+  image_description?: string;
+  additional_context?: string;
+  is_public?: boolean;
+  is_common_use?: boolean;
+  created_datetime_utc?: string;
+  [key: string]: unknown;
+};
+
 function getPage(searchParams: Record<string, string | string[] | undefined> | undefined) {
   const raw = searchParams?.page;
   const value = Array.isArray(raw) ? raw[0] : raw;
@@ -16,12 +28,12 @@ function getPage(searchParams: Record<string, string | string[] | undefined> | u
   return Number.isFinite(page) && page > 0 ? page : 1;
 }
 
-async function checkTableAccessible(supabase: any, tableName: string) {
+async function checkTableAccessible(supabase: SupabaseClient, tableName: string) {
   const { error } = await supabase.from(tableName).select("*").limit(1);
   return { tableName, error };
 }
 
-async function fetchTablePage(supabase: any, tableName: string, page: number) {
+async function fetchTablePage(supabase: SupabaseClient, tableName: string, page: number) {
   const from = (page - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
 
@@ -38,7 +50,7 @@ async function fetchTablePage(supabase: any, tableName: string, page: number) {
   const result = await query;
   
   // Supabase returns { data, error, count } when using count: "exact"
-  const data = result.data as any[] | null;
+  const data = result.data as TableRow[] | null;
   const error = result.error;
   const count = result.count;
   
@@ -119,7 +131,7 @@ export default async function ItemsPage({
   }
 
   // Try each common table name until we find one that works
-  let error: any = null;
+  let error: PostgrestError | null = null;
   let workingTable = "";
   const errors: Array<{ table: string; error: string }> = [];
 
@@ -278,7 +290,7 @@ export default async function ItemsPage({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {data.map((image: any, index: number) => {
+            {data.map((image: TableRow, index: number) => {
               // Get description fields, treating empty strings as null
               const imageDesc = image.image_description?.trim() || null;
               const additionalCtx = image.additional_context?.trim() || null;
