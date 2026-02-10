@@ -24,6 +24,8 @@ async function checkTableAccessible(supabase: any, tableName: string) {
 async function fetchTablePage(supabase: any, tableName: string, page: number) {
   const from = (page - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
+  // Fetch one extra item to check if there's a next page
+  const toWithExtra = to + 1;
 
   // Prefer consistent ordering for images (others may not have created_datetime_utc)
   const query =
@@ -32,20 +34,26 @@ async function fetchTablePage(supabase: any, tableName: string, page: number) {
           .from(tableName)
           .select("*", { count: "exact" })
           .order("created_datetime_utc", { ascending: false })
-          .range(from, to)
-      : supabase.from(tableName).select("*", { count: "exact" }).range(from, to);
+          .range(from, toWithExtra)
+      : supabase.from(tableName).select("*", { count: "exact" }).range(from, toWithExtra);
 
   const result = await query;
   
   // Supabase returns { data, error, count } when using count: "exact"
-  const data = result.data as any[] | null;
+  const allData = result.data as any[] | null;
   const error = result.error;
   const count = result.count;
+  
+  // Check if we got more than PAGE_SIZE items (indicates there's a next page)
+  const hasMore = (allData?.length ?? 0) > PAGE_SIZE;
+  
+  // Return only PAGE_SIZE items, but keep track if there's more
+  const data = allData?.slice(0, PAGE_SIZE) ?? null;
   
   // Ensure count is a number (Supabase returns it as a number or null/undefined)
   const totalCount = typeof count === "number" ? count : null;
   
-  return { data: data ?? null, error, count: totalCount };
+  return { data, error, count: totalCount, hasMore };
 }
 
 export default async function ItemsPage({
@@ -175,18 +183,23 @@ export default async function ItemsPage({
   const hasPrevPage = page > 1;
   
   // Calculate if there's a next page:
-  // - If we have exact count: check if we haven't reached the end
-  // - If no exact count: enable Next if we got a full page (might be more data)
+  // Priority 1: Use hasMore flag (we fetched PAGE_SIZE+1 to check)
+  // Priority 2: If we have exact count, use that
+  // Priority 3: Fallback to checking if we got a full page
   const itemsReturned = data?.length ?? 0;
+  const hasMore = pageResult.hasMore ?? false;
+  
   let hasNextPage: boolean;
   
-  if (totalCount !== null && totalCount > 0) {
+  if (hasMore) {
+    // We fetched one extra item and got it, so there's definitely more
+    hasNextPage = true;
+  } else if (totalCount !== null && totalCount > 0) {
     // We have exact count - check if current page end is less than total
     const currentPageEnd = (page - 1) * PAGE_SIZE + itemsReturned;
     hasNextPage = currentPageEnd < totalCount;
   } else {
-    // No count available or count is 0 - enable Next if we got a full page
-    // This is a conservative approach: if we got exactly PAGE_SIZE items, there might be more
+    // No count available - enable Next if we got a full page
     hasNextPage = itemsReturned >= PAGE_SIZE;
   }
   if (pageResult.error) {
