@@ -35,12 +35,17 @@ async function fetchTablePage(supabase: any, tableName: string, page: number) {
           .range(from, to)
       : supabase.from(tableName).select("*", { count: "exact" }).range(from, to);
 
-  const response = await query;
-  const data = response.data as any[] | null;
-  const error = response.error;
-  const count = response.count ?? null;
+  const result = await query;
   
-  return { data: data ?? null, error, count: typeof count === "number" ? count : null };
+  // Supabase returns { data, error, count } when using count: "exact"
+  const data = result.data as any[] | null;
+  const error = result.error;
+  const count = result.count;
+  
+  // Ensure count is a number (Supabase returns it as a number or null/undefined)
+  const totalCount = typeof count === "number" ? count : null;
+  
+  return { data: data ?? null, error, count: totalCount };
 }
 
 export default async function ItemsPage({
@@ -166,15 +171,17 @@ export default async function ItemsPage({
   const data = pageResult.data;
   
   // Get total count - use exact count if available, otherwise estimate based on current page
-  const totalCount = pageResult.count ?? null;
+  const totalCount = pageResult.count;
   const hasPrevPage = page > 1;
   
   // Calculate if there's a next page:
-  // - If we have exact count: check if current page end < total count
+  // - If we have exact count: check if we haven't reached the end
+  //   (items returned + current page offset < total count)
   // - If no exact count: enable Next if we got a full page (might be more data)
+  const itemsReturned = data?.length ?? 0;
   const hasNextPage = totalCount !== null
-    ? page * PAGE_SIZE < totalCount
-    : (data?.length ?? 0) === PAGE_SIZE;
+    ? (page - 1) * PAGE_SIZE + itemsReturned < totalCount
+    : itemsReturned === PAGE_SIZE; // If we got a full page, assume there might be more
   if (pageResult.error) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
@@ -253,16 +260,20 @@ export default async function ItemsPage({
               >
                 Prev
               </Link>
-              <Link
-                href={`/items?page=${page + 1}`}
-                className={`rounded-lg px-4 py-2 text-sm font-medium border transition-colors ${
-                  !hasNextPage
-                    ? "pointer-events-none opacity-50 border-zinc-200 dark:border-zinc-800 text-zinc-500 cursor-not-allowed"
-                    : "border-zinc-200 dark:border-zinc-800 hover:bg-white/60 dark:hover:bg-zinc-900/60 text-zinc-700 dark:text-zinc-300"
-                }`}
-              >
-                Next
-              </Link>
+              {hasNextPage ? (
+                <Link
+                  href={`/items?page=${page + 1}`}
+                  className="rounded-lg px-4 py-2 text-sm font-medium border border-zinc-200 dark:border-zinc-800 hover:bg-white/60 dark:hover:bg-zinc-900/60 text-zinc-700 dark:text-zinc-300 transition-colors"
+                >
+                  Next
+                </Link>
+              ) : (
+                <span
+                  className="rounded-lg px-4 py-2 text-sm font-medium border border-zinc-200 dark:border-zinc-800 text-zinc-500 cursor-not-allowed opacity-50"
+                >
+                  Next
+                </span>
+              )}
             </div>
           </div>
 
