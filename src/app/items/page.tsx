@@ -176,12 +176,19 @@ export default async function ItemsPage({
   
   // Calculate if there's a next page:
   // - If we have exact count: check if we haven't reached the end
-  //   (items returned + current page offset < total count)
   // - If no exact count: enable Next if we got a full page (might be more data)
   const itemsReturned = data?.length ?? 0;
-  const hasNextPage = totalCount !== null
-    ? (page - 1) * PAGE_SIZE + itemsReturned < totalCount
-    : itemsReturned === PAGE_SIZE; // If we got a full page, assume there might be more
+  let hasNextPage: boolean;
+  
+  if (totalCount !== null && totalCount > 0) {
+    // We have exact count - check if current page end is less than total
+    const currentPageEnd = (page - 1) * PAGE_SIZE + itemsReturned;
+    hasNextPage = currentPageEnd < totalCount;
+  } else {
+    // No count available or count is 0 - enable Next if we got a full page
+    // This is a conservative approach: if we got exactly PAGE_SIZE items, there might be more
+    hasNextPage = itemsReturned >= PAGE_SIZE;
+  }
   if (pageResult.error) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
@@ -244,22 +251,29 @@ export default async function ItemsPage({
 
           {/* Grid */}
           <div className="flex items-center justify-between mb-6">
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              Page <span className="font-semibold text-zinc-900 dark:text-zinc-100">{page}</span>
-              {" "}• showing {data.length} result{data.length !== 1 ? "s" : ""}
-            </p>
+            <div>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                Page <span className="font-semibold text-zinc-900 dark:text-zinc-100">{page}</span>
+                {" "}• showing {data.length} result{data.length !== 1 ? "s" : ""}
+              </p>
+              {/* Debug info - remove after testing */}
+              <p className="text-xs text-zinc-400 dark:text-zinc-600 mt-1">
+                Total: {totalCount ?? "unknown"} • HasNext: {hasNextPage ? "yes" : "no"} • Items: {itemsReturned}
+              </p>
+            </div>
             <div className="flex gap-2">
-              <Link
-                href={`/items?page=${Math.max(1, page - 1)}`}
-                aria-disabled={!hasPrevPage}
-                className={`rounded-lg px-4 py-2 text-sm font-medium border transition-colors ${
-                  !hasPrevPage
-                    ? "pointer-events-none opacity-50 border-zinc-200 dark:border-zinc-800 text-zinc-500 cursor-not-allowed"
-                    : "border-zinc-200 dark:border-zinc-800 hover:bg-white/60 dark:hover:bg-zinc-900/60 text-zinc-700 dark:text-zinc-300"
-                }`}
-              >
-                Prev
-              </Link>
+              {hasPrevPage ? (
+                <Link
+                  href={`/items?page=${page - 1}`}
+                  className="rounded-lg px-4 py-2 text-sm font-medium border border-zinc-200 dark:border-zinc-800 hover:bg-white/60 dark:hover:bg-zinc-900/60 text-zinc-700 dark:text-zinc-300 transition-colors"
+                >
+                  Prev
+                </Link>
+              ) : (
+                <span className="rounded-lg px-4 py-2 text-sm font-medium border border-zinc-200 dark:border-zinc-800 text-zinc-500 cursor-not-allowed opacity-50">
+                  Prev
+                </span>
+              )}
               {hasNextPage ? (
                 <Link
                   href={`/items?page=${page + 1}`}
@@ -268,9 +282,7 @@ export default async function ItemsPage({
                   Next
                 </Link>
               ) : (
-                <span
-                  className="rounded-lg px-4 py-2 text-sm font-medium border border-zinc-200 dark:border-zinc-800 text-zinc-500 cursor-not-allowed opacity-50"
-                >
+                <span className="rounded-lg px-4 py-2 text-sm font-medium border border-zinc-200 dark:border-zinc-800 text-zinc-500 cursor-not-allowed opacity-50">
                   Next
                 </span>
               )}
