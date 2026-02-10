@@ -37,9 +37,9 @@ export default async function ItemsPage() {
   }
 
   const hasMismatch =
-    Boolean(env.urlRef) && Boolean(env.keyRef) && env.urlRef !== env.keyRef;
+    env && Boolean(env.urlRef) && Boolean(env.keyRef) && env.urlRef !== env.keyRef;
 
-  if (hasMismatch) {
+  if (hasMismatch && env) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
         <main className="w-full max-w-3xl px-6">
@@ -163,25 +163,23 @@ export default async function ItemsPage() {
                 className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-4 bg-white dark:bg-zinc-900 shadow-sm hover:shadow-md transition-shadow"
               >
                 {image.url && (
-                  <div className="mb-4 rounded-lg overflow-hidden">
+                  <div className="mb-4 rounded-lg overflow-hidden bg-zinc-100 dark:bg-zinc-800">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={image.url}
                       alt={image.image_description || "Image"}
                       className="w-full h-48 object-cover"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = "none";
-                      }}
                     />
                   </div>
                 )}
                 <div className="space-y-2">
                   {image.image_description && (
-                    <p className="text-sm text-zinc-700 dark:text-zinc-300 line-clamp-2">
+                    <p className="text-sm text-zinc-700 dark:text-zinc-300 overflow-hidden text-ellipsis" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                       {image.image_description}
                     </p>
                   )}
                   {image.additional_context && (
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-2">
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 overflow-hidden text-ellipsis" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                       {image.additional_context}
                     </p>
                   )}
