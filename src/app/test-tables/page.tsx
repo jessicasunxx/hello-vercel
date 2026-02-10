@@ -85,7 +85,7 @@ export default async function TestTablesPage() {
             <p className="text-zinc-600 dark:text-zinc-400">
               Found {workingTables.length} accessible table{workingTables.length !== 1 ? "s" : ""}:
             </p>
-            {workingTables.map(({ tableName, rowCount }) => (
+            {workingTables.map(({ tableName }) => (
               <div
                 key={tableName}
                 className="border border-green-300 bg-green-50 dark:bg-green-900/20 rounded-lg p-4"
