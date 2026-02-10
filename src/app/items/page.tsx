@@ -148,59 +148,96 @@ export default async function ItemsPage() {
   // Render images table with a nicer display
   if (workingTable === "images") {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-        <main className="w-full max-w-6xl px-6 py-8">
-          <h1 className="text-3xl font-bold text-black dark:text-zinc-50 mb-2">
-            Images from Supabase
-          </h1>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6">
-            Table: <code className="bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded">{workingTable}</code> • {data.length} image{data.length !== 1 ? "s" : ""}
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {data.map((image: any) => (
+      <div className="min-h-screen bg-gradient-to-br from-zinc-50 via-white to-zinc-100 dark:from-black dark:via-zinc-950 dark:to-zinc-900 font-sans">
+        <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          {/* Header */}
+          <div className="mb-10">
+            <h1 className="text-5xl font-bold bg-gradient-to-r from-zinc-900 to-zinc-600 dark:from-zinc-100 dark:to-zinc-400 bg-clip-text text-transparent mb-3">
+              Image Gallery
+            </h1>
+            <div className="flex items-center gap-3 text-sm text-zinc-600 dark:text-zinc-400">
+              <span className="px-3 py-1 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-sm border border-zinc-200 dark:border-zinc-800 rounded-full font-mono text-xs">
+                {workingTable}
+              </span>
+              <span className="text-zinc-400">•</span>
+              <span className="font-medium">{data.length} image{data.length !== 1 ? "s" : ""}</span>
+            </div>
+          </div>
+
+          {/* Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {data.map((image: any, index: number) => (
               <div
                 key={image.id}
-                className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-4 bg-white dark:bg-zinc-900 shadow-sm hover:shadow-md transition-shadow"
+                className="group relative bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm border border-zinc-200/50 dark:border-zinc-800/50 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1"
+                style={{ animationDelay: `${index * 50}ms` }}
               >
+                {/* Image Container */}
                 {image.url && (
-                  <div className="mb-4 rounded-lg overflow-hidden bg-zinc-100 dark:bg-zinc-800">
+                  <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-900">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={image.url}
                       alt={image.image_description || "Image"}
-                      className="w-full h-48 object-cover"
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                     />
+                    {/* Gradient Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    
+                    {/* Badges Overlay */}
+                    <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      {image.is_public && (
+                        <span className="px-2.5 py-1 bg-emerald-500/90 backdrop-blur-sm text-white text-xs font-semibold rounded-full shadow-lg">
+                          Public
+                        </span>
+                      )}
+                      {image.is_common_use && (
+                        <span className="px-2.5 py-1 bg-blue-500/90 backdrop-blur-sm text-white text-xs font-semibold rounded-full shadow-lg">
+                          Common
+                        </span>
+                      )}
+                    </div>
                   </div>
                 )}
-                <div className="space-y-2">
+
+                {/* Content */}
+                <div className="p-5 space-y-3">
                   {image.image_description && (
-                    <p className="text-sm text-zinc-700 dark:text-zinc-300 overflow-hidden text-ellipsis" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                    <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 leading-snug" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                       {image.image_description}
-                    </p>
+                    </h3>
                   )}
+                  
                   {image.additional_context && (
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400 overflow-hidden text-ellipsis" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                    <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                       {image.additional_context}
                     </p>
                   )}
-                  <div className="flex items-center gap-2 text-xs text-zinc-400 dark:text-zinc-500">
-                    {image.is_public && (
-                      <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded">
-                        Public
+
+                  {/* Footer */}
+                  <div className="flex items-center justify-between pt-2 border-t border-zinc-200/50 dark:border-zinc-800/50">
+                    {image.created_datetime_utc && (
+                      <span className="text-xs text-zinc-500 dark:text-zinc-500">
+                        {new Date(image.created_datetime_utc).toLocaleDateString('en-US', { 
+                          month: 'short', 
+                          day: 'numeric',
+                          year: 'numeric'
+                        })}
                       </span>
                     )}
-                    {image.is_common_use && (
-                      <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded">
-                        Common Use
-                      </span>
-                    )}
+                    <div className="flex gap-1.5">
+                      {image.is_public && (
+                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                      )}
+                      {image.is_common_use && (
+                        <span className="w-2 h-2 rounded-full bg-blue-500" />
+                      )}
+                    </div>
                   </div>
-                  {image.created_datetime_utc && (
-                    <p className="text-xs text-zinc-400 dark:text-zinc-500">
-                      Created: {new Date(image.created_datetime_utc).toLocaleDateString()}
-                    </p>
-                  )}
                 </div>
+
+                {/* Hover Glow Effect */}
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-500/0 via-purple-500/0 to-pink-500/0 group-hover:from-blue-500/10 group-hover:via-purple-500/10 group-hover:to-pink-500/10 transition-all duration-500 pointer-events-none" />
               </div>
             ))}
           </div>
