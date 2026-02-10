@@ -27,22 +27,60 @@ async function fetchTablePage(supabase: any, tableName: string, page: number) {
   // Fetch one extra item to check if there's a next page
   const toWithExtra = to + 1;
 
-  // Prefer consistent ordering for images (others may not have created_datetime_utc)
-  const query =
-    tableName === "images"
-      ? supabase
-          .from(tableName)
-          .select("*", { count: "exact" })
-          .order("created_datetime_utc", { ascending: false })
-          .range(from, toWithExtra)
-      : supabase.from(tableName).select("*", { count: "exact" }).range(from, toWithExtra);
-
-  const result = await query;
+  // For images table, join with captions to get the caption text
+  // One image can have many captions, so we'll get the first one
+  // Note: We fetch count separately for images because joins can affect count accuracy
+  let count: number | null = null;
+  let error: any = null;
+  let allData: any[] | null = null;
   
-  // Supabase returns { data, error, count } when using count: "exact"
-  const allData = result.data as any[] | null;
-  const error = result.error;
-  const count = result.count;
+  if (tableName === "images") {
+    // First, get the count separately (without join to get accurate count)
+    const countResult = await supabase
+      .from(tableName)
+      .select("*", { count: "exact", head: true });
+    count = typeof countResult.count === "number" ? countResult.count : null;
+    
+    // Then fetch the data with captions join
+    const dataResult = await supabase
+      .from(tableName)
+      .select(`
+        *,
+        captions(
+          id,
+          caption_text,
+          created_at_utc
+        )
+      `)
+      .order("created_datetime_utc", { ascending: false })
+      .range(from, toWithExtra);
+    
+    allData = dataResult.data as any[] | null;
+    error = dataResult.error;
+  } else {
+    const result = await supabase.from(tableName).select("*", { count: "exact" }).range(from, toWithExtra);
+    allData = result.data as any[] | null;
+    error = result.error;
+    count = typeof result.count === "number" ? result.count : null;
+  }
+  
+  // If we're fetching images, process the captions data
+  if (tableName === "images" && allData) {
+    allData = allData.map((image: any) => {
+      // Get the first caption (or you could get the top voted one)
+      const caption = Array.isArray(image.captions) && image.captions.length > 0
+        ? image.captions[0]
+        : null;
+      
+      return {
+        ...image,
+        caption: caption?.caption_text || null,
+        caption_id: caption?.id || null,
+        // Remove the captions array since we've extracted what we need
+        captions: undefined,
+      };
+    });
+  }
   
   // Check if we got more than PAGE_SIZE items (indicates there's a next page)
   const hasMore = (allData?.length ?? 0) > PAGE_SIZE;
@@ -264,16 +302,10 @@ export default async function ItemsPage({
 
           {/* Grid */}
           <div className="flex items-center justify-between mb-6">
-            <div>
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                Page <span className="font-semibold text-zinc-900 dark:text-zinc-100">{page}</span>
-                {" "}• showing {data.length} result{data.length !== 1 ? "s" : ""}
-              </p>
-              {/* Debug info - remove after testing */}
-              <p className="text-xs text-zinc-400 dark:text-zinc-600 mt-1">
-                Total: {totalCount ?? "unknown"} • HasNext: {hasNextPage ? "yes" : "no"} • Items: {itemsReturned}
-              </p>
-            </div>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              Page <span className="font-semibold text-zinc-900 dark:text-zinc-100">{page}</span>
+              {" "}• showing {data.length} result{data.length !== 1 ? "s" : ""}
+            </p>
             <div className="flex gap-2">
               {hasPrevPage ? (
                 <Link
@@ -304,18 +336,8 @@ export default async function ItemsPage({
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {data.map((image: any, index: number) => {
-              // Get description fields, treating empty strings as null
-              const imageDesc = image.image_description?.trim() || null;
-              const additionalCtx = image.additional_context?.trim() || null;
-              
-              // Primary description: prefer image_description, fallback to additional_context
-              const primaryDescription = imageDesc || additionalCtx;
-              
-              // Secondary description: show additional_context only if it's different from primary
-              const secondaryDescription = 
-                imageDesc && additionalCtx && imageDesc !== additionalCtx
-                  ? additionalCtx
-                  : null;
+              // Get caption text - this is what we want to display
+              const caption = image.caption?.trim() || null;
 
               return (
                 <div
@@ -329,7 +351,7 @@ export default async function ItemsPage({
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={image.url}
-                        alt={primaryDescription || "Image"}
+                        alt={caption || "Image"}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                       />
                       {/* Gradient Overlay */}
@@ -353,36 +375,22 @@ export default async function ItemsPage({
 
                   {/* Content */}
                   <div className="p-5 space-y-3">
-                    {primaryDescription ? (
+                    {caption ? (
                       <h3
                         className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 leading-snug"
                         style={{
                           display: "-webkit-box",
-                          WebkitLineClamp: 2,
+                          WebkitLineClamp: 3,
                           WebkitBoxOrient: "vertical",
                           overflow: "hidden",
                         }}
                       >
-                        {primaryDescription}
+                        {caption}
                       </h3>
                     ) : (
                       <h3 className="text-sm font-medium text-zinc-400 dark:text-zinc-500 italic">
-                        No description available
+                        No caption available
                       </h3>
-                    )}
-                    
-                    {secondaryDescription && (
-                      <p
-                        className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed"
-                        style={{
-                          display: "-webkit-box",
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: "vertical",
-                          overflow: "hidden",
-                        }}
-                      >
-                        {secondaryDescription}
-                      </p>
                     )}
 
                     {/* Footer */}
