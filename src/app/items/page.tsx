@@ -41,8 +41,8 @@ async function fetchTablePage(supabase: any, tableName: string, page: number) {
       .select("*", { count: "exact", head: true });
     count = typeof countResult.count === "number" ? countResult.count : null;
     
-    // Then fetch the data with captions join
-    // Try different possible column names for caption text
+    // Then fetch the data with captions join (left join to get all images)
+    // The relationship is: captions.image_id -> images.id
     const dataResult = await supabase
       .from(tableName)
       .select(`
@@ -51,6 +51,9 @@ async function fetchTablePage(supabase: any, tableName: string, page: number) {
       `)
       .order("created_datetime_utc", { ascending: false })
       .range(from, toWithExtra);
+    
+    allData = dataResult.data as any[] | null;
+    error = dataResult.error;
     
     allData = dataResult.data as any[] | null;
     error = dataResult.error;
