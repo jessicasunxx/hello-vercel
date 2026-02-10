@@ -30,13 +30,17 @@ async function fetchTablePage(supabase: any, tableName: string, page: number) {
     tableName === "images"
       ? supabase
           .from(tableName)
-          .select("*")
+          .select("*", { count: "exact" })
           .order("created_datetime_utc", { ascending: false })
           .range(from, to)
-      : supabase.from(tableName).select("*").range(from, to);
+      : supabase.from(tableName).select("*", { count: "exact" }).range(from, to);
 
-  const { data, error } = await query;
-  return { data: (data as any[]) ?? null, error };
+  const response = await query;
+  const data = response.data as any[] | null;
+  const error = response.error;
+  const count = response.count ?? null;
+  
+  return { data: data ?? null, error, count: typeof count === "number" ? count : null };
 }
 
 export default async function ItemsPage({
@@ -160,6 +164,17 @@ export default async function ItemsPage({
 
   const pageResult = await fetchTablePage(supabase, workingTable, page);
   const data = pageResult.data;
+  
+  // Get total count - use exact count if available, otherwise estimate based on current page
+  const totalCount = pageResult.count ?? null;
+  const hasPrevPage = page > 1;
+  
+  // Calculate if there's a next page:
+  // - If we have exact count: check if current page end < total count
+  // - If no exact count: enable Next if we got a full page (might be more data)
+  const hasNextPage = totalCount !== null
+    ? page * PAGE_SIZE < totalCount
+    : (data?.length ?? 0) === PAGE_SIZE;
   if (pageResult.error) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
@@ -206,7 +221,17 @@ export default async function ItemsPage({
                 {workingTable}
               </span>
               <span className="text-zinc-400">•</span>
-              <span className="font-medium">{data.length} image{data.length !== 1 ? "s" : ""}</span>
+              <span className="font-medium">
+                {totalCount !== null ? (
+                  <>
+                    {totalCount} image{totalCount !== 1 ? "s" : ""}
+                  </>
+                ) : (
+                  <>
+                    {data.length}+ image{data.length !== 1 ? "s" : ""}
+                  </>
+                )}
+              </span>
             </div>
           </div>
 
@@ -219,9 +244,9 @@ export default async function ItemsPage({
             <div className="flex gap-2">
               <Link
                 href={`/items?page=${Math.max(1, page - 1)}`}
-                aria-disabled={page <= 1}
+                aria-disabled={!hasPrevPage}
                 className={`rounded-lg px-4 py-2 text-sm font-medium border transition-colors ${
-                  page <= 1
+                  !hasPrevPage
                     ? "pointer-events-none opacity-50 border-zinc-200 dark:border-zinc-800 text-zinc-500 cursor-not-allowed"
                     : "border-zinc-200 dark:border-zinc-800 hover:bg-white/60 dark:hover:bg-zinc-900/60 text-zinc-700 dark:text-zinc-300"
                 }`}
@@ -231,7 +256,7 @@ export default async function ItemsPage({
               <Link
                 href={`/items?page=${page + 1}`}
                 className={`rounded-lg px-4 py-2 text-sm font-medium border transition-colors ${
-                  data.length < PAGE_SIZE
+                  !hasNextPage
                     ? "pointer-events-none opacity-50 border-zinc-200 dark:border-zinc-800 text-zinc-500 cursor-not-allowed"
                     : "border-zinc-200 dark:border-zinc-800 hover:bg-white/60 dark:hover:bg-zinc-900/60 text-zinc-700 dark:text-zinc-300"
                 }`}
@@ -242,84 +267,115 @@ export default async function ItemsPage({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {data.map((image: any, index: number) => (
-              <div
-                key={image.id}
-                className="group relative bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm border border-zinc-200/50 dark:border-zinc-800/50 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1"
-                style={{ animationDelay: `${index * 50}ms` }}
-              >
-                {/* Image Container */}
-                {image.url && (
-                  <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-900">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={image.url}
-                      alt={image.image_description || "Image"}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                    />
-                    {/* Gradient Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    
-                    {/* Badges Overlay */}
-                    <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      {image.is_public && (
-                        <span className="px-2.5 py-1 bg-emerald-500/90 backdrop-blur-sm text-white text-xs font-semibold rounded-full shadow-lg">
-                          Public
-                        </span>
-                      )}
-                      {image.is_common_use && (
-                        <span className="px-2.5 py-1 bg-blue-500/90 backdrop-blur-sm text-white text-xs font-semibold rounded-full shadow-lg">
-                          Common
-                        </span>
-                      )}
+            {data.map((image: any, index: number) => {
+              // Get description fields, treating empty strings as null
+              const imageDesc = image.image_description?.trim() || null;
+              const additionalCtx = image.additional_context?.trim() || null;
+              
+              // Primary description: prefer image_description, fallback to additional_context
+              const primaryDescription = imageDesc || additionalCtx;
+              
+              // Secondary description: show additional_context only if it's different from primary
+              const secondaryDescription = 
+                imageDesc && additionalCtx && imageDesc !== additionalCtx
+                  ? additionalCtx
+                  : null;
+
+              return (
+                <div
+                  key={image.id}
+                  className="group relative bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm border border-zinc-200/50 dark:border-zinc-800/50 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1"
+                  style={{ animationDelay: `${index * 50}ms` }}
+                >
+                  {/* Image Container */}
+                  {image.url && (
+                    <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-900">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={image.url}
+                        alt={primaryDescription || "Image"}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      />
+                      {/* Gradient Overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      
+                      {/* Badges Overlay */}
+                      <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        {image.is_public && (
+                          <span className="px-2.5 py-1 bg-emerald-500/90 backdrop-blur-sm text-white text-xs font-semibold rounded-full shadow-lg">
+                            Public
+                          </span>
+                        )}
+                        {image.is_common_use && (
+                          <span className="px-2.5 py-1 bg-blue-500/90 backdrop-blur-sm text-white text-xs font-semibold rounded-full shadow-lg">
+                            Common
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
-
-                {/* Content */}
-                <div className="p-5 space-y-3">
-                  {image.image_description ? (
-                    <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 leading-snug" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                      {image.image_description}
-                    </h3>
-                  ) : (
-                    <h3 className="text-sm font-medium text-zinc-400 dark:text-zinc-500 italic">
-                      No description available
-                    </h3>
-                  )}
-                  
-                  {image.additional_context && (
-                    <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                      {image.additional_context}
-                    </p>
                   )}
 
-                  {/* Footer */}
-                  <div className="flex items-center justify-between pt-2 border-t border-zinc-200/50 dark:border-zinc-800/50">
-                    {image.created_datetime_utc && (
-                      <span className="text-xs text-zinc-500 dark:text-zinc-500">
-                        {new Date(image.created_datetime_utc).toLocaleDateString('en-US', { 
-                          month: 'short', 
-                          day: 'numeric',
-                          year: 'numeric'
-                        })}
-                      </span>
+                  {/* Content */}
+                  <div className="p-5 space-y-3">
+                    {primaryDescription ? (
+                      <h3
+                        className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 leading-snug"
+                        style={{
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
+                        }}
+                      >
+                        {primaryDescription}
+                      </h3>
+                    ) : (
+                      <h3 className="text-sm font-medium text-zinc-400 dark:text-zinc-500 italic">
+                        No description available
+                      </h3>
                     )}
-                    <div className="flex gap-1.5">
-                      {image.is_public && (
-                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                    
+                    {secondaryDescription && (
+                      <p
+                        className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed"
+                        style={{
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
+                        }}
+                      >
+                        {secondaryDescription}
+                      </p>
+                    )}
+
+                    {/* Footer */}
+                    <div className="flex items-center justify-between pt-2 border-t border-zinc-200/50 dark:border-zinc-800/50">
+                      {image.created_datetime_utc && (
+                        <span className="text-xs text-zinc-500 dark:text-zinc-500">
+                          {new Date(image.created_datetime_utc).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })}
+                        </span>
                       )}
-                      {image.is_common_use && (
-                        <span className="w-2 h-2 rounded-full bg-blue-500" />
-                      )}
+                      <div className="flex gap-1.5">
+                        {image.is_public && (
+                          <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                        )}
+                        {image.is_common_use && (
+                          <span className="w-2 h-2 rounded-full bg-blue-500" />
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Hover Glow Effect */}
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-500/0 via-purple-500/0 to-pink-500/0 group-hover:from-blue-500/10 group-hover:via-purple-500/10 group-hover:to-pink-500/10 transition-all duration-500 pointer-events-none" />
-              </div>
-            ))}
+                  {/* Hover Glow Effect */}
+                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-500/0 via-purple-500/0 to-pink-500/0 group-hover:from-blue-500/10 group-hover:via-purple-500/10 group-hover:to-pink-500/10 transition-all duration-500 pointer-events-none" />
+                </div>
+              );
+            })}
           </div>
         </main>
       </div>

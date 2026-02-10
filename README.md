@@ -2,6 +2,23 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+### Environment Variables
+
+This project requires Supabase environment variables. Create a `.env.local` file in the root directory with:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://qihsgnfjqmkjmoowyfbn.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
+```
+
+**For Vercel deployment:**
+1. Go to Vercel Dashboard → Your Project → Settings → Environment Variables
+2. Add `NEXT_PUBLIC_SUPABASE_URL` = `https://qihsgnfjqmkjmoowyfbn.supabase.co`
+3. Add `NEXT_PUBLIC_SUPABASE_ANON_KEY` with your anon key
+4. Redeploy your project
+
+### Development
+
 First, run the development server:
 
 ```bash
