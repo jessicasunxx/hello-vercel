@@ -1,79 +1,42 @@
 import { getSupabaseServerClient } from "@/lib/supabaseClient";
-import Link from "next/link";
 
 export const dynamic = "force-dynamic"; // Ensures fresh data on each request
 
 // Class database tables (pre-existing)
-// If you don't have access to one of these, Supabase will return an RLS/permission error.
 const COMMON_TABLES = ["images", "captions", "caption_votes", "profiles"];
 
-const PAGE_SIZE = 24;
-
-function getPage(searchParams: Record<string, string | string[] | undefined> | undefined) {
-  const raw = searchParams?.page;
-  const value = Array.isArray(raw) ? raw[0] : raw;
-  const page = Number.parseInt(value ?? "1", 10);
-  return Number.isFinite(page) && page > 0 ? page : 1;
-}
+// Fetch all images at once - no pagination
+const MAX_IMAGES = 1000;
 
 async function checkTableAccessible(supabase: any, tableName: string) {
   const { error } = await supabase.from(tableName).select("*").limit(1);
   return { tableName, error };
 }
 
-async function fetchTablePage(supabase: any, tableName: string, page: number) {
-  const from = (page - 1) * PAGE_SIZE;
-  const to = from + PAGE_SIZE - 1;
-  // Fetch one extra item to check if there's a next page
-  const toWithExtra = to + 1;
-
-  // For images table, join with captions to get the caption text
-  // One image can have many captions, so we'll get the first one
-  // Note: We fetch count separately for images because joins can affect count accuracy
-  let count: number | null = null;
-  let error: any = null;
-  let allData: any[] | null = null;
+async function fetchAllImages(supabase: any) {
+  // Fetch all images with captions - no pagination
+  // The relationship is: captions.image_id -> images.id
+  const dataResult = await supabase
+    .from("images")
+    .select(`
+      *,
+      captions(*)
+    `)
+    .order("created_datetime_utc", { ascending: false })
+    .limit(MAX_IMAGES);
   
-  if (tableName === "images") {
-    // First, get the count separately (without join to get accurate count)
-    const countResult = await supabase
-      .from(tableName)
-      .select("*", { count: "exact", head: true });
-    count = typeof countResult.count === "number" ? countResult.count : null;
-    
-    // Then fetch the data with captions join (left join to get all images)
-    // The relationship is: captions.image_id -> images.id
-    const dataResult = await supabase
-      .from(tableName)
-      .select(`
-        *,
-        captions(*)
-      `)
-      .order("created_datetime_utc", { ascending: false })
-      .range(from, toWithExtra);
-    
-    allData = dataResult.data as any[] | null;
-    error = dataResult.error;
-    
-    allData = dataResult.data as any[] | null;
-    error = dataResult.error;
-  } else {
-    const result = await supabase.from(tableName).select("*", { count: "exact" }).range(from, toWithExtra);
-    allData = result.data as any[] | null;
-    error = result.error;
-    count = typeof result.count === "number" ? result.count : null;
-  }
+  let allData = dataResult.data as any[] | null;
+  const error = dataResult.error;
   
-  // If we're fetching images, process the captions data
-  if (tableName === "images" && allData) {
+  // Process the captions data
+  if (allData) {
     allData = allData.map((image: any) => {
-      // Get the first caption (or you could get the top voted one)
+      // Get the first caption
       const caption = Array.isArray(image.captions) && image.captions.length > 0
         ? image.captions[0]
         : null;
       
       // Try different possible column names for caption text
-      // Common names: text, caption, caption_text, content, body
       const captionText = caption?.text 
         || caption?.caption 
         || caption?.caption_text 
@@ -85,31 +48,16 @@ async function fetchTablePage(supabase: any, tableName: string, page: number) {
         ...image,
         caption: captionText,
         caption_id: caption?.id || null,
-        // Remove the captions array since we've extracted what we need
         captions: undefined,
       };
     });
   }
   
-  // Check if we got more than PAGE_SIZE items (indicates there's a next page)
-  const hasMore = (allData?.length ?? 0) > PAGE_SIZE;
-  
-  // Return only PAGE_SIZE items, but keep track if there's more
-  const data = allData?.slice(0, PAGE_SIZE) ?? null;
-  
-  // Ensure count is a number (Supabase returns it as a number or null/undefined)
-  const totalCount = typeof count === "number" ? count : null;
-  
-  return { data, error, count: totalCount, hasMore };
+  return { data: allData, error };
 }
 
-export default async function ItemsPage({
-  searchParams,
-}: {
-  searchParams?: Record<string, string | string[] | undefined>;
-}) {
+export default async function ItemsPage() {
   const { supabase, env, error: envError } = getSupabaseServerClient();
-  const page = getPage(searchParams);
 
   if (!supabase || envError) {
     return (
@@ -173,43 +121,18 @@ export default async function ItemsPage({
     );
   }
 
-  // Try each common table name until we find one that works
-  let error: any = null;
-  let workingTable = "";
-  const errors: Array<{ table: string; error: string }> = [];
-
-  for (const tableName of COMMON_TABLES) {
-    const result = await checkTableAccessible(supabase, tableName);
-    if (!result.error) {
-      workingTable = tableName;
-      break;
-    }
-    if (result.error) {
-      errors.push({ table: tableName, error: result.error.message });
-    }
-    // If this is the last table and it failed, save the error
-    if (tableName === COMMON_TABLES[COMMON_TABLES.length - 1]) {
-      error = result.error;
-    }
-  }
-
-  if (error) {
+  // Check if images table is accessible
+  const imagesCheck = await checkTableAccessible(supabase, "images");
+  
+  if (imagesCheck.error) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
         <main className="w-full max-w-3xl px-6">
           <div className="rounded-lg border border-red-300 bg-red-50 p-4 text-red-800 dark:bg-red-900/20 dark:text-red-400">
             <h2 className="text-xl font-bold mb-2">Error loading data</h2>
-            <p className="mb-2 font-mono text-sm">{error.message}</p>
+            <p className="mb-2 font-mono text-sm">{imagesCheck.error.message}</p>
             <div className="mt-4 text-sm space-y-2">
-              <p className="font-semibold">Tried tables:</p>
-              <ul className="list-disc list-inside space-y-1 ml-2">
-                {errors.map((e, i) => (
-                  <li key={i} className="font-mono text-xs">
-                    {e.table}: {e.error}
-                  </li>
-                ))}
-              </ul>
-              <p className="font-semibold mt-4">Possible issues:</p>
+              <p className="font-semibold">Possible issues:</p>
               <ol className="list-decimal list-inside space-y-1 ml-2">
                 <li>Environment variables not set in Vercel (check Settings → Environment Variables)</li>
                 <li>Table names don&apos;t match - check Supabase Dashboard → Table Editor for actual table names</li>
@@ -222,40 +145,17 @@ export default async function ItemsPage({
     );
   }
 
-  const pageResult = await fetchTablePage(supabase, workingTable, page);
-  const data = pageResult.data;
+  // Fetch all images with captions
+  const result = await fetchAllImages(supabase);
+  const data = result.data;
   
-  // Get total count - use exact count if available, otherwise estimate based on current page
-  const totalCount = pageResult.count;
-  const hasPrevPage = page > 1;
-  
-  // Calculate if there's a next page:
-  // Priority 1: Use hasMore flag (we fetched PAGE_SIZE+1 to check)
-  // Priority 2: If we have exact count, use that
-  // Priority 3: Fallback to checking if we got a full page
-  const itemsReturned = data?.length ?? 0;
-  const hasMore = pageResult.hasMore ?? false;
-  
-  let hasNextPage: boolean;
-  
-  if (hasMore) {
-    // We fetched one extra item and got it, so there's definitely more
-    hasNextPage = true;
-  } else if (totalCount !== null && totalCount > 0) {
-    // We have exact count - check if current page end is less than total
-    const currentPageEnd = (page - 1) * PAGE_SIZE + itemsReturned;
-    hasNextPage = currentPageEnd < totalCount;
-  } else {
-    // No count available - enable Next if we got a full page
-    hasNextPage = itemsReturned >= PAGE_SIZE;
-  }
-  if (pageResult.error) {
+  if (result.error) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
         <main className="w-full max-w-3xl px-6">
           <div className="rounded-lg border border-red-300 bg-red-50 p-4 text-red-800 dark:bg-red-900/20 dark:text-red-400">
-            <h2 className="text-xl font-bold mb-2">Error loading page</h2>
-            <p className="mb-2 font-mono text-sm">{pageResult.error.message}</p>
+            <h2 className="text-xl font-bold mb-2">Error loading images</h2>
+            <p className="mb-2 font-mono text-sm">{result.error.message}</p>
           </div>
         </main>
       </div>
@@ -267,199 +167,124 @@ export default async function ItemsPage({
       <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
         <main className="w-full max-w-3xl px-6 text-center">
           <h1 className="text-3xl font-bold text-black dark:text-zinc-50 mb-4">
-            Items from Supabase
+            Image Gallery
           </h1>
           <p className="text-lg text-zinc-600 dark:text-zinc-400">
-            No rows found in the table &quot;{workingTable || "selected table"}&quot;.
-          </p>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2">
-            The table exists but is empty.
+            No images found.
           </p>
         </main>
       </div>
     );
   }
 
-  // Render images table with a nicer display
-  if (workingTable === "images") {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-zinc-50 via-white to-zinc-100 dark:from-black dark:via-zinc-950 dark:to-zinc-900 font-sans">
-        <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          {/* Header */}
-          <div className="mb-10">
-            <h1 className="text-5xl font-bold bg-gradient-to-r from-zinc-900 to-zinc-600 dark:from-zinc-100 dark:to-zinc-400 bg-clip-text text-transparent mb-3">
-              Image Gallery
-            </h1>
-            <div className="flex items-center gap-3 text-sm text-zinc-600 dark:text-zinc-400">
-              <span className="px-3 py-1 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-sm border border-zinc-200 dark:border-zinc-800 rounded-full font-mono text-xs">
-                {workingTable}
-              </span>
-              <span className="text-zinc-400">•</span>
-              <span className="font-medium">
-                {totalCount !== null ? (
-                  <>
-                    {totalCount} image{totalCount !== 1 ? "s" : ""}
-                  </>
-                ) : (
-                  <>
-                    {data.length}+ image{data.length !== 1 ? "s" : ""}
-                  </>
-                )}
-              </span>
-            </div>
+  // Render all images in a grid - no pagination
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-zinc-50 via-white to-zinc-100 dark:from-black dark:via-zinc-950 dark:to-zinc-900 font-sans">
+      <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Header */}
+        <div className="mb-10">
+          <h1 className="text-5xl font-bold bg-gradient-to-r from-zinc-900 to-zinc-600 dark:from-zinc-100 dark:to-zinc-400 bg-clip-text text-transparent mb-3">
+            Meme Gallery
+          </h1>
+          <div className="flex items-center gap-3 text-sm text-zinc-600 dark:text-zinc-400">
+            <span className="px-3 py-1 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-sm border border-zinc-200 dark:border-zinc-800 rounded-full font-mono text-xs">
+              images
+            </span>
+            <span className="text-zinc-400">•</span>
+            <span className="font-medium">
+              {data.length} meme{data.length !== 1 ? "s" : ""}
+            </span>
           </div>
+        </div>
 
-          {/* Grid */}
-          <div className="flex items-center justify-between mb-6">
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              Page <span className="font-semibold text-zinc-900 dark:text-zinc-100">{page}</span>
-              {" "}• showing {data.length} result{data.length !== 1 ? "s" : ""}
-            </p>
-            <div className="flex gap-2">
-              {hasPrevPage ? (
-                <Link
-                  href={`/items?page=${page - 1}`}
-                  className="rounded-lg px-4 py-2 text-sm font-medium border border-zinc-200 dark:border-zinc-800 hover:bg-white/60 dark:hover:bg-zinc-900/60 text-zinc-700 dark:text-zinc-300 transition-colors"
-                >
-                  Prev
-                </Link>
-              ) : (
-                <span className="rounded-lg px-4 py-2 text-sm font-medium border border-zinc-200 dark:border-zinc-800 text-zinc-500 cursor-not-allowed opacity-50">
-                  Prev
-                </span>
-              )}
-              {hasNextPage ? (
-                <Link
-                  href={`/items?page=${page + 1}`}
-                  className="rounded-lg px-4 py-2 text-sm font-medium border border-zinc-200 dark:border-zinc-800 hover:bg-white/60 dark:hover:bg-zinc-900/60 text-zinc-700 dark:text-zinc-300 transition-colors"
-                >
-                  Next
-                </Link>
-              ) : (
-                <span className="rounded-lg px-4 py-2 text-sm font-medium border border-zinc-200 dark:border-zinc-800 text-zinc-500 cursor-not-allowed opacity-50">
-                  Next
-                </span>
-              )}
-            </div>
-          </div>
+        {/* Grid - All memes displayed at once */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {data.map((image: any, index: number) => {
+            // Get caption text
+            const caption = image.caption?.trim() || null;
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {data.map((image: any, index: number) => {
-              // Get caption text - this is what we want to display
-              const caption = image.caption?.trim() || null;
-
-              return (
-                <div
-                  key={image.id}
-                  className="group relative bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm border border-zinc-200/50 dark:border-zinc-800/50 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1"
-                  style={{ animationDelay: `${index * 50}ms` }}
-                >
-                  {/* Image Container */}
-                  {image.url && (
-                    <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-900">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={image.url}
-                        alt={caption || "Image"}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                      />
-                      {/* Gradient Overlay */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                      
-                      {/* Badges Overlay */}
-                      <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        {image.is_public && (
-                          <span className="px-2.5 py-1 bg-emerald-500/90 backdrop-blur-sm text-white text-xs font-semibold rounded-full shadow-lg">
-                            Public
-                          </span>
-                        )}
-                        {image.is_common_use && (
-                          <span className="px-2.5 py-1 bg-blue-500/90 backdrop-blur-sm text-white text-xs font-semibold rounded-full shadow-lg">
-                            Common
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Content */}
-                  <div className="p-5 space-y-3">
-                    {caption ? (
-                      <h3
-                        className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 leading-snug"
-                        style={{
-                          display: "-webkit-box",
-                          WebkitLineClamp: 3,
-                          WebkitBoxOrient: "vertical",
-                          overflow: "hidden",
-                        }}
-                      >
-                        {caption}
-                      </h3>
-                    ) : (
-                      <h3 className="text-sm font-medium text-zinc-400 dark:text-zinc-500 italic">
-                        No caption available
-                      </h3>
-                    )}
-
-                    {/* Footer */}
-                    <div className="flex items-center justify-between pt-2 border-t border-zinc-200/50 dark:border-zinc-800/50">
-                      {image.created_datetime_utc && (
-                        <span className="text-xs text-zinc-500 dark:text-zinc-500">
-                          {new Date(image.created_datetime_utc).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          })}
+            return (
+              <div
+                key={image.id}
+                className="group relative bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm border border-zinc-200/50 dark:border-zinc-800/50 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                {/* Image Container */}
+                {image.url && (
+                  <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-900">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={image.url}
+                      alt={caption || "Meme"}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    />
+                    {/* Gradient Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    
+                    {/* Badges Overlay */}
+                    <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      {image.is_public && (
+                        <span className="px-2.5 py-1 bg-emerald-500/90 backdrop-blur-sm text-white text-xs font-semibold rounded-full shadow-lg">
+                          Public
                         </span>
                       )}
-                      <div className="flex gap-1.5">
-                        {image.is_public && (
-                          <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                        )}
-                        {image.is_common_use && (
-                          <span className="w-2 h-2 rounded-full bg-blue-500" />
-                        )}
-                      </div>
+                      {image.is_common_use && (
+                        <span className="px-2.5 py-1 bg-blue-500/90 backdrop-blur-sm text-white text-xs font-semibold rounded-full shadow-lg">
+                          Common
+                        </span>
+                      )}
                     </div>
                   </div>
+                )}
 
-                  {/* Hover Glow Effect */}
-                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-500/0 via-purple-500/0 to-pink-500/0 group-hover:from-blue-500/10 group-hover:via-purple-500/10 group-hover:to-pink-500/10 transition-all duration-500 pointer-events-none" />
+                {/* Content */}
+                <div className="p-5 space-y-3">
+                  {caption ? (
+                    <h3
+                      className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 leading-snug"
+                      style={{
+                        display: "-webkit-box",
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                      }}
+                    >
+                      {caption}
+                    </h3>
+                  ) : (
+                    <h3 className="text-sm font-medium text-zinc-400 dark:text-zinc-500 italic">
+                      No caption available
+                    </h3>
+                  )}
+
+                  {/* Footer */}
+                  <div className="flex items-center justify-between pt-2 border-t border-zinc-200/50 dark:border-zinc-800/50">
+                    {image.created_datetime_utc && (
+                      <span className="text-xs text-zinc-500 dark:text-zinc-500">
+                        {new Date(image.created_datetime_utc).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </span>
+                    )}
+                    <div className="flex gap-1.5">
+                      {image.is_public && (
+                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                      )}
+                      {image.is_common_use && (
+                        <span className="w-2 h-2 rounded-full bg-blue-500" />
+                      )}
+                    </div>
+                  </div>
                 </div>
-              );
-            })}
-          </div>
-        </main>
-      </div>
-    );
-  }
 
-  // Render other tables in a clean card format
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="w-full max-w-4xl px-6 py-8">
-        <h1 className="text-3xl font-bold text-black dark:text-zinc-50 mb-6">
-          Items from Supabase
-        </h1>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">
-          Table: <code className="bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded">{workingTable}</code> • Page {page}
-        </p>
-        <div className="space-y-4">
-          {data.map((row, index) => (
-            <div
-              key={row.id || index}
-              className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-4 bg-white dark:bg-zinc-900 shadow-sm"
-            >
-              <pre className="text-sm text-zinc-700 dark:text-zinc-300 overflow-x-auto">
-                {JSON.stringify(row, null, 2)}
-              </pre>
-            </div>
-          ))}
+                {/* Hover Glow Effect */}
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-500/0 via-purple-500/0 to-pink-500/0 group-hover:from-blue-500/10 group-hover:via-purple-500/10 group-hover:to-pink-500/10 transition-all duration-500 pointer-events-none" />
+              </div>
+            );
+          })}
         </div>
-        <p className="mt-6 text-sm text-zinc-500 dark:text-zinc-400">
-          Total: {data.length} row{data.length !== 1 ? "s" : ""}
-        </p>
       </main>
     </div>
   );
