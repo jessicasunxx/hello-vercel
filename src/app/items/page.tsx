@@ -42,15 +42,12 @@ async function fetchTablePage(supabase: any, tableName: string, page: number) {
     count = typeof countResult.count === "number" ? countResult.count : null;
     
     // Then fetch the data with captions join
+    // Try different possible column names for caption text
     const dataResult = await supabase
       .from(tableName)
       .select(`
         *,
-        captions(
-          id,
-          caption_text,
-          created_at_utc
-        )
+        captions(*)
       `)
       .order("created_datetime_utc", { ascending: false })
       .range(from, toWithExtra);
@@ -72,9 +69,18 @@ async function fetchTablePage(supabase: any, tableName: string, page: number) {
         ? image.captions[0]
         : null;
       
+      // Try different possible column names for caption text
+      // Common names: text, caption, caption_text, content, body
+      const captionText = caption?.text 
+        || caption?.caption 
+        || caption?.caption_text 
+        || caption?.content 
+        || caption?.body
+        || null;
+      
       return {
         ...image,
-        caption: caption?.caption_text || null,
+        caption: captionText,
         caption_id: caption?.id || null,
         // Remove the captions array since we've extracted what we need
         captions: undefined,
