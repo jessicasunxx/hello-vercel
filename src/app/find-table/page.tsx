@@ -3,7 +3,7 @@ import { getSupabaseServerClient } from "@/lib/supabaseClient";
 export const dynamic = "force-dynamic";
 
 export default async function FindTablePage() {
-  const { supabase, env, error: envError } = getSupabaseServerClient();
+  const { supabase, env, error: envError } = await getSupabaseServerClient();
 
   if (!supabase || envError) {
     return (

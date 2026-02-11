@@ -59,7 +59,7 @@ async function fetchAllImages(supabase: any) {
 }
 
 export default async function ItemsPage() {
-  const { supabase, env, error: envError } = getSupabaseServerClient();
+  const { supabase, env, error: envError } = await getSupabaseServerClient();
 
   if (!supabase || envError) {
     return (

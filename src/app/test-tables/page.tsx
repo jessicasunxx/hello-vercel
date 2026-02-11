@@ -12,7 +12,7 @@ const COMMON_TABLES = [
 ];
 
 export default async function TestTablesPage() {
-  const { supabase, env, error: envError } = getSupabaseServerClient();
+  const { supabase, env, error: envError } = await getSupabaseServerClient();
 
   if (!supabase || envError) {
     return (

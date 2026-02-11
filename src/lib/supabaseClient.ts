@@ -76,11 +76,11 @@ export function getSupabaseEnv(): { env: SupabaseEnv | null; error: string | nul
   };
 }
 
-export function getSupabaseServerClient() {
+export async function getSupabaseServerClient() {
   const { env, error } = getSupabaseEnv();
   if (!env) return { supabase: null, env: null, error };
 
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
 
   const supabase = createServerClient(env.url, env.anonKey, {
     cookies: {
