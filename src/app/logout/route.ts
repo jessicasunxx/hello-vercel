@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseClient";
 
-export async function POST(request: NextRequest) {
+async function handleSignOut(request: NextRequest) {
   // Ensure we have the Supabase client wired with cookies
   const { supabase } = await getSupabaseServerClient();
 
@@ -14,5 +14,13 @@ export async function POST(request: NextRequest) {
   const response = NextResponse.redirect(new URL("/", url.origin));
 
   return response;
+}
+
+export async function POST(request: NextRequest) {
+  return handleSignOut(request);
+}
+
+export async function GET(request: NextRequest) {
+  return handleSignOut(request);
 }
 
