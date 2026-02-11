@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getSupabaseServerClient } from "@/lib/supabaseClient";
 import MemeCard from "./MemeCard";
 
@@ -76,6 +77,35 @@ export default async function ItemsPage() {
                 <li>Redeploy your project</li>
               </ol>
             </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // Check authentication status; this route is now protected.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
+        <main className="w-full max-w-3xl px-6 text-center space-y-6">
+          <h1 className="text-3xl font-bold text-black dark:text-zinc-50">
+            Meme Gallery is protected
+          </h1>
+          <p className="text-lg text-zinc-600 dark:text-zinc-400">
+            Please sign in with Google to view and interact with the meme
+            gallery.
+          </p>
+          <div className="flex justify-center">
+            <Link
+              href="/login"
+              className="inline-flex items-center justify-center rounded-lg bg-black px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+            >
+              Continue to sign in
+            </Link>
           </div>
         </main>
       </div>
@@ -187,7 +217,7 @@ export default async function ItemsPage() {
           <h1 className="text-5xl font-bold bg-gradient-to-r from-zinc-900 to-zinc-600 dark:from-zinc-100 dark:to-zinc-400 bg-clip-text text-transparent mb-3">
             Meme Gallery
           </h1>
-          <div className="flex items-center gap-3 text-sm text-zinc-600 dark:text-zinc-400">
+          <div className="flex flex-wrap items-center gap-3 text-sm text-zinc-600 dark:text-zinc-400">
             <span className="px-3 py-1 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-sm border border-zinc-200 dark:border-zinc-800 rounded-full font-mono text-xs">
               images
             </span>
@@ -195,6 +225,18 @@ export default async function ItemsPage() {
             <span className="font-medium">
               {data.length} meme{data.length !== 1 ? "s" : ""}
             </span>
+            <span className="text-zinc-400">•</span>
+            <span className="text-xs text-zinc-500 dark:text-zinc-500">
+              Signed in as {user.email}
+            </span>
+            <form action="/logout" method="post" className="ml-auto">
+              <button
+                type="submit"
+                className="rounded-full border border-zinc-300 bg-white px-3 py-1 text-xs font-medium text-zinc-700 shadow-sm transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              >
+                Sign out
+              </button>
+            </form>
           </div>
         </div>
 

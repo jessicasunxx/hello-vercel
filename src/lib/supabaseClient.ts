@@ -1,6 +1,7 @@
 import "server-only";
 
-import { createClient } from "@supabase/supabase-js";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { cookies } from "next/headers";
 
 type SupabaseEnv = {
   url: string;
@@ -78,5 +79,22 @@ export function getSupabaseEnv(): { env: SupabaseEnv | null; error: string | nul
 export function getSupabaseServerClient() {
   const { env, error } = getSupabaseEnv();
   if (!env) return { supabase: null, env: null, error };
-  return { supabase: createClient(env.url, env.anonKey), env, error: null };
+
+  const cookieStore = cookies();
+
+  const supabase = createServerClient(env.url, env.anonKey, {
+    cookies: {
+      get(name: string) {
+        return cookieStore.get(name)?.value;
+      },
+      set(name: string, value: string, options: CookieOptions) {
+        cookieStore.set({ name, value, ...options });
+      },
+      remove(name: string, options: CookieOptions) {
+        cookieStore.set({ name, value: "", ...options });
+      },
+    },
+  });
+
+  return { supabase, env, error: null };
 }
