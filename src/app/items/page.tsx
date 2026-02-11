@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getSupabaseServerClient } from "@/lib/supabaseClient";
 import MemeCard from "./MemeCard";
+import SignOutButton from "./SignOutButton";
 
 export const dynamic = "force-dynamic"; // Ensures fresh data on each request
 
@@ -229,14 +230,9 @@ export default async function ItemsPage() {
             <span className="text-xs text-zinc-500 dark:text-zinc-500">
               Signed in as {user.email}
             </span>
-            <form action="/logout" method="post" className="ml-auto">
-              <button
-                type="submit"
-                className="rounded-full border border-zinc-300 bg-white px-3 py-1 text-xs font-medium text-zinc-700 shadow-sm transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
-              >
-                Sign out
-              </button>
-            </form>
+            <div className="ml-auto">
+              <SignOutButton />
+            </div>
           </div>
         </div>
 
