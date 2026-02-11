@@ -8,13 +8,7 @@ export default function LoginPage() {
           Sign in to continue
         </h1>
         <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-          You&apos;ll be redirected to Google, then back through{" "}
-          <span className="font-mono text-xs">secure.almostcrackd.ai</span>, and
-          finally to{" "}
-          <span className="font-mono text-xs">
-            /auth/callback
-          </span>{" "}
-          in this app.
+          Sign in with your Google account to access the protected content.
         </p>
         <div className="mt-6 flex justify-center">
           <LoginButton />
