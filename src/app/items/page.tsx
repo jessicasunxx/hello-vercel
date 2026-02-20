@@ -19,17 +19,11 @@ async function checkTableAccessible(supabase: any, tableName: string) {
 async function fetchAllImages(supabase: any, userId: string | null) {
   // Fetch all images with captions - no pagination
   // The relationship is: captions.image_id -> images.id
-  // We'll filter captions in code to only show public ones with content
   const dataResult = await supabase
     .from("images")
     .select(`
       *,
-      captions(
-        id,
-        content,
-        is_public,
-        created_datetime_utc
-      )
+      captions(*)
     `)
     .order("created_datetime_utc", { ascending: false })
     .limit(MAX_IMAGES);
@@ -37,34 +31,16 @@ async function fetchAllImages(supabase: any, userId: string | null) {
   let allData = dataResult.data as any[] | null;
   const error = dataResult.error;
   
-  // Debug: Log caption fetching results
-  if (allData) {
-    const imagesWithCaptions = allData.filter((img: any) => 
-      Array.isArray(img.captions) && img.captions.length > 0
-    ).length;
-    const imagesWithoutCaptions = allData.length - imagesWithCaptions;
-    console.log(`Total images: ${allData.length}, With captions: ${imagesWithCaptions}, Without: ${imagesWithoutCaptions}`);
-    
-    // Log a sample of caption data
-    const sampleWithCaption = allData.find((img: any) => 
-      Array.isArray(img.captions) && img.captions.length > 0
-    );
-    if (sampleWithCaption) {
-      console.log("Sample caption object:", sampleWithCaption.captions[0]);
-    }
-  }
-  
   // Process the captions data
   if (allData) {
-    // Get all caption IDs
+    // Get all caption IDs (from all captions for voting)
     const captionIds = allData
-      .map((image: any) => {
-        const caption = Array.isArray(image.captions) && image.captions.length > 0
-          ? image.captions[0]
-          : null;
-        return caption?.id;
-      })
-      .filter((id: any) => id != null);
+      .flatMap((image: any) => {
+        if (Array.isArray(image.captions) && image.captions.length > 0) {
+          return image.captions.map((c: any) => c?.id).filter((id: any) => id != null);
+        }
+        return [];
+      });
     
     // Fetch user's votes for all captions (if authenticated)
     let userVotes: Record<string, number> = {};
@@ -114,21 +90,26 @@ async function fetchAllImages(supabase: any, userId: string | null) {
     }
     
     allData = allData.map((image: any) => {
-      // Filter captions: only public ones with non-null, non-empty content
-      let validCaptions = [];
+      // Get the first caption (for voting - we need caption_id)
+      let caption = null;
       if (Array.isArray(image.captions) && image.captions.length > 0) {
-        validCaptions = image.captions.filter((c: any) => 
+        // Prefer public captions with content, but fall back to any caption for voting
+        const publicCaptionWithContent = image.captions.find((c: any) => 
           c.is_public === true && 
           c.content && 
           c.content.trim() !== ''
         );
+        caption = publicCaptionWithContent || image.captions[0];
       }
       
-      // Get the first valid caption (or null if none)
-      const caption = validCaptions.length > 0 ? validCaptions[0] : null;
-      
       // The caption text column is 'content' according to the schema
-      const captionText = caption?.content?.trim() || null;
+      // Only show text if it's public and has content
+      const captionText = caption && 
+        caption.is_public === true && 
+        caption.content && 
+        caption.content.trim() !== ''
+        ? caption.content.trim() 
+        : null;
       
       const captionId = caption?.id || null;
       const userVote = captionId ? userVotes[captionId] || null : null;
