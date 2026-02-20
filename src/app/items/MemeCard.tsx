@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import ImageModal from "./ImageModal";
 
 interface MemeCardProps {
@@ -23,7 +24,13 @@ interface MemeCardProps {
 }
 
 export default function MemeCard({ image, index }: MemeCardProps) {
+  const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleVote = () => {
+    // Refresh the page data when a vote is submitted
+    router.refresh();
+  };
 
   return (
     <>
@@ -111,6 +118,7 @@ export default function MemeCard({ image, index }: MemeCardProps) {
         image={image}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
+        onVote={handleVote}
       />
     </>
   );

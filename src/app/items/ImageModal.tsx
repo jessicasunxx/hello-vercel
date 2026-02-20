@@ -22,9 +22,10 @@ interface ImageModalProps {
   } | null;
   isOpen: boolean;
   onClose: () => void;
+  onVote?: () => void; // Callback when a vote is submitted
 }
 
-export default function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
+export default function ImageModal({ image, isOpen, onClose, onVote }: ImageModalProps) {
   const router = useRouter();
   const [isVoting, setIsVoting] = useState(false);
   const [userVote, setUserVote] = useState<number | null>(image?.user_vote ?? null);
@@ -102,7 +103,12 @@ export default function ImageModal({ image, isOpen, onClose }: ImageModalProps) 
 
         setVoteStats(newStats);
 
-        // Refresh the page to get updated data from server
+        // Notify parent that a vote was submitted (this will trigger refresh)
+        if (onVote) {
+          onVote();
+        }
+
+        // Also refresh here to ensure data is updated
         router.refresh();
       } else {
         console.error("Failed to submit vote:", result.error);
