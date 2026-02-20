@@ -38,6 +38,15 @@ export async function submitVote(
     // If clicking the same vote button, remove the vote (delete the row)
     if (currentVote === vote) {
       console.log("Removing vote (same button clicked)");
+      // Try to find the vote column name first
+      const { data: existingVote } = await supabase
+        .from("caption_votes")
+        .select("*")
+        .eq("profile_id", user.id)
+        .eq("caption_id", captionId)
+        .limit(1)
+        .single();
+      
       const { error: deleteError } = await supabase
         .from("caption_votes")
         .delete()
@@ -59,19 +68,46 @@ export async function submitVote(
     // Otherwise, upsert the vote (insert or update if exists)
     // The unique constraint on (profile_id, caption_id) ensures only one vote per user per caption
     console.log("Upserting vote:", { profile_id: user.id, caption_id: captionId, vote });
-    const { error: voteError, data } = await supabase
-      .from("caption_votes")
-      .upsert(
-        {
-          profile_id: user.id,
-          caption_id: captionId,
-          vote: vote,
-        },
-        {
-          onConflict: "profile_id,caption_id",
-        }
-      )
-      .select();
+    
+    // Try common column name variations: 'vote', 'votes', 'value'
+    const columnNamesToTry = ['vote', 'votes', 'value', 'rating'];
+    let lastError: any = null;
+    
+    for (const columnName of columnNamesToTry) {
+      console.log(`Trying column name: ${columnName}`);
+      const votePayload: any = {
+        profile_id: user.id,
+        caption_id: captionId,
+      };
+      votePayload[columnName] = vote;
+      
+      const { error: voteError, data } = await supabase
+        .from("caption_votes")
+        .upsert(
+          votePayload,
+          {
+            onConflict: "profile_id,caption_id",
+          }
+        )
+        .select();
+      
+      if (!voteError) {
+        console.log(`Success with column name: ${columnName}`);
+        return { success: true, error: null };
+      }
+      
+      lastError = voteError;
+      console.log(`Failed with column name ${columnName}:`, voteError.message);
+      
+      // If the error is NOT about the column name, stop trying
+      if (!voteError.message.includes('column') && !voteError.message.includes('schema cache')) {
+        break;
+      }
+    }
+    
+    // If we get here, all column names failed
+    const voteError = lastError;
+    const data = null;
 
     console.log("Upsert result:", { voteError, data });
 

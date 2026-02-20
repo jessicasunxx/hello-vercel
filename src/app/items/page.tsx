@@ -46,15 +46,29 @@ async function fetchAllImages(supabase: any, userId: string | null) {
     // Fetch user's votes for all captions (if authenticated)
     let userVotes: Record<string, number> = {};
     if (userId && captionIds.length > 0) {
+      // Try to get all columns to find the vote column name
       const votesResult = await supabase
         .from("caption_votes")
-        .select("caption_id, vote")
+        .select("*")
         .eq("profile_id", userId)
         .in("caption_id", captionIds);
       
-      if (votesResult.data) {
+      if (votesResult.data && votesResult.data.length > 0) {
+        // Find the vote column name dynamically from first row
+        const firstRow = votesResult.data[0];
+        const voteColumnName = Object.keys(firstRow).find(key => 
+          (key.toLowerCase().includes('vote') || 
+           key.toLowerCase().includes('value') ||
+           key.toLowerCase().includes('rating')) &&
+          key !== 'caption_id' && 
+          key !== 'profile_id'
+        ) || 'vote';
+        
         votesResult.data.forEach((vote: any) => {
-          userVotes[vote.caption_id] = vote.vote;
+          const voteValue = vote[voteColumnName];
+          if (voteValue !== undefined) {
+            userVotes[vote.caption_id] = voteValue;
+          }
         });
       }
     }
@@ -64,20 +78,33 @@ async function fetchAllImages(supabase: any, userId: string | null) {
     if (captionIds.length > 0) {
       const countsResult = await supabase
         .from("caption_votes")
-        .select("caption_id, vote")
+        .select("*")
         .in("caption_id", captionIds);
       
-      if (countsResult.data) {
+      if (countsResult.data && countsResult.data.length > 0) {
+        // Find the vote column name dynamically from first row
+        const firstRow = countsResult.data[0];
+        const voteColumnName = Object.keys(firstRow).find(key => 
+          (key.toLowerCase().includes('vote') || 
+           key.toLowerCase().includes('value') ||
+           key.toLowerCase().includes('rating')) &&
+          key !== 'caption_id' && 
+          key !== 'profile_id'
+        ) || 'vote';
+        
         countsResult.data.forEach((vote: any) => {
-          if (!voteCounts[vote.caption_id]) {
-            voteCounts[vote.caption_id] = { upvotes: 0, downvotes: 0, total: 0 };
+          const voteValue = vote[voteColumnName];
+          if (voteValue !== undefined) {
+            if (!voteCounts[vote.caption_id]) {
+              voteCounts[vote.caption_id] = { upvotes: 0, downvotes: 0, total: 0 };
+            }
+            if (voteValue === 1) {
+              voteCounts[vote.caption_id].upvotes++;
+            } else if (voteValue === -1) {
+              voteCounts[vote.caption_id].downvotes++;
+            }
+            voteCounts[vote.caption_id].total += voteValue;
           }
-          if (vote.vote === 1) {
-            voteCounts[vote.caption_id].upvotes++;
-          } else if (vote.vote === -1) {
-            voteCounts[vote.caption_id].downvotes++;
-          }
-          voteCounts[vote.caption_id].total += vote.vote;
         });
       }
     }
@@ -89,11 +116,18 @@ async function fetchAllImages(supabase: any, userId: string | null) {
         : null;
       
       // Try different possible column names for caption text
+      // Log the caption object to debug
+      if (caption && !caption.text && !caption.caption && !caption.caption_text && !caption.content && !caption.body) {
+        console.log("Caption object keys:", Object.keys(caption));
+        console.log("Caption object:", caption);
+      }
+      
       const captionText = caption?.text 
         || caption?.caption 
         || caption?.caption_text 
         || caption?.content 
         || caption?.body
+        || caption?.description
         || null;
       
       const captionId = caption?.id || null;
