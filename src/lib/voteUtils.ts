@@ -16,6 +16,7 @@ export async function submitVote(
   currentVote: number | null = null
 ): Promise<{ success: boolean; error: string | null }> {
   try {
+    console.log("submitVote called:", { captionId, vote, currentVote });
     const supabase = getSupabaseBrowserClient();
     
     // Get the current user
@@ -24,7 +25,10 @@ export async function submitVote(
       error: userError,
     } = await supabase.auth.getUser();
 
+    console.log("User check:", { user: user?.id, userError });
+
     if (userError || !user) {
+      console.error("User not authenticated:", userError);
       return {
         success: false,
         error: "You must be logged in to vote",
@@ -33,6 +37,7 @@ export async function submitVote(
 
     // If clicking the same vote button, remove the vote (delete the row)
     if (currentVote === vote) {
+      console.log("Removing vote (same button clicked)");
       const { error: deleteError } = await supabase
         .from("caption_votes")
         .delete()
@@ -47,12 +52,14 @@ export async function submitVote(
         };
       }
 
+      console.log("Vote removed successfully");
       return { success: true, error: null };
     }
 
     // Otherwise, upsert the vote (insert or update if exists)
     // The unique constraint on (profile_id, caption_id) ensures only one vote per user per caption
-    const { error: voteError } = await supabase
+    console.log("Upserting vote:", { profile_id: user.id, caption_id: captionId, vote });
+    const { error: voteError, data } = await supabase
       .from("caption_votes")
       .upsert(
         {
@@ -63,7 +70,10 @@ export async function submitVote(
         {
           onConflict: "profile_id,caption_id",
         }
-      );
+      )
+      .select();
+
+    console.log("Upsert result:", { voteError, data });
 
     if (voteError) {
       console.error("Error submitting vote:", voteError);
@@ -73,6 +83,7 @@ export async function submitVote(
       };
     }
 
+    console.log("Vote submitted successfully");
     return { success: true, error: null };
   } catch (error) {
     console.error("Unexpected error submitting vote:", error);

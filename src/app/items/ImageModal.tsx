@@ -60,11 +60,22 @@ export default function ImageModal({ image, isOpen, onClose }: ImageModalProps) 
   }, [isOpen, onClose]);
 
   const handleVote = async (vote: 1 | -1) => {
-    if (!image?.caption_id || isVoting) return;
+    console.log("handleVote called:", { vote, caption_id: image?.caption_id, userVote, isVoting });
+    
+    if (!image?.caption_id) {
+      console.warn("No caption_id available");
+      return;
+    }
+    
+    if (isVoting) {
+      console.warn("Already voting, ignoring click");
+      return;
+    }
 
     setIsVoting(true);
     try {
       const result = await submitVote(image.caption_id, vote, userVote);
+      console.log("Vote result:", result);
 
       if (result.success) {
         // Update local state optimistically
@@ -95,16 +106,25 @@ export default function ImageModal({ image, isOpen, onClose }: ImageModalProps) 
         router.refresh();
       } else {
         console.error("Failed to submit vote:", result.error);
-        // Could show an error toast here
+        alert(`Failed to submit vote: ${result.error}`);
       }
     } catch (error) {
       console.error("Error voting:", error);
+      alert(`Error: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
       setIsVoting(false);
     }
   };
 
   if (!isOpen || !image) return null;
+
+  // Debug log
+  console.log("ImageModal render:", { 
+    caption_id: image.caption_id, 
+    hasCaption: !!image.caption,
+    userVote,
+    voteStats 
+  });
 
   return (
     <div
@@ -158,11 +178,15 @@ export default function ImageModal({ image, isOpen, onClose }: ImageModalProps) 
           )}
 
           {/* Voting Section */}
-          {image.caption_id && (
+          {image.caption_id ? (
             <div className="mb-4 flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => handleVote(1)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleVote(1);
+                  }}
                   disabled={isVoting}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
                     userVote === 1
@@ -170,6 +194,7 @@ export default function ImageModal({ image, isOpen, onClose }: ImageModalProps) 
                       : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
                   } disabled:opacity-50 disabled:cursor-not-allowed`}
                   aria-label="Upvote"
+                  type="button"
                 >
                   <svg
                     className="w-5 h-5"
@@ -187,7 +212,11 @@ export default function ImageModal({ image, isOpen, onClose }: ImageModalProps) 
                   <span>{voteStats.upvotes}</span>
                 </button>
                 <button
-                  onClick={() => handleVote(-1)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleVote(-1);
+                  }}
                   disabled={isVoting}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
                     userVote === -1
@@ -195,6 +224,7 @@ export default function ImageModal({ image, isOpen, onClose }: ImageModalProps) 
                       : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
                   } disabled:opacity-50 disabled:cursor-not-allowed`}
                   aria-label="Downvote"
+                  type="button"
                 >
                   <svg
                     className="w-5 h-5"
@@ -219,6 +249,10 @@ export default function ImageModal({ image, isOpen, onClose }: ImageModalProps) 
                 </span>
                 <span className="ml-1">total</span>
               </div>
+            </div>
+          ) : (
+            <div className="mb-4 text-sm text-zinc-500 dark:text-zinc-400">
+              No caption available for voting
             </div>
           )}
 
