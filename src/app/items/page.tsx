@@ -31,6 +31,23 @@ async function fetchAllImages(supabase: any, userId: string | null) {
   let allData = dataResult.data as any[] | null;
   const error = dataResult.error;
   
+  // Debug: Log caption fetching results
+  if (allData) {
+    const imagesWithCaptions = allData.filter((img: any) => 
+      Array.isArray(img.captions) && img.captions.length > 0
+    ).length;
+    const imagesWithoutCaptions = allData.length - imagesWithCaptions;
+    console.log(`Total images: ${allData.length}, With captions: ${imagesWithCaptions}, Without: ${imagesWithoutCaptions}`);
+    
+    // Log a sample of caption data
+    const sampleWithCaption = allData.find((img: any) => 
+      Array.isArray(img.captions) && img.captions.length > 0
+    );
+    if (sampleWithCaption) {
+      console.log("Sample caption object:", sampleWithCaption.captions[0]);
+    }
+  }
+  
   // Process the captions data
   if (allData) {
     // Get all caption IDs
@@ -91,13 +108,18 @@ async function fetchAllImages(supabase: any, userId: string | null) {
     }
     
     allData = allData.map((image: any) => {
-      // Get the first caption
-      const caption = Array.isArray(image.captions) && image.captions.length > 0
-        ? image.captions[0]
-        : null;
+      // Get the first caption (prefer public captions, or any caption)
+      let caption = null;
+      if (Array.isArray(image.captions) && image.captions.length > 0) {
+        // Try to find a public caption first, otherwise use the first one
+        caption = image.captions.find((c: any) => c.is_public === true) || image.captions[0];
+      }
       
       // The caption text column is 'content' according to the schema
-      const captionText = caption?.content || null;
+      // Check if content exists and is not empty
+      const captionText = caption?.content && caption.content.trim() !== '' 
+        ? caption.content.trim() 
+        : null;
       
       const captionId = caption?.id || null;
       const userVote = captionId ? userVotes[captionId] || null : null;
