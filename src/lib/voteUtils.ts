@@ -68,6 +68,7 @@ export async function submitVote(
     // Otherwise, upsert the vote (insert or update if exists)
     // The unique constraint on (profile_id, caption_id) ensures only one vote per user per caption
     // The column name is 'vote_value' according to the schema
+    // created_datetime_utc is NOT NULL, so we need to provide it
     console.log("Upserting vote:", { profile_id: user.id, caption_id: captionId, vote });
     
     const { error: voteError, data } = await supabase
@@ -77,6 +78,7 @@ export async function submitVote(
           profile_id: user.id,
           caption_id: captionId,
           vote_value: vote,
+          created_datetime_utc: new Date().toISOString(),
         },
         {
           onConflict: "profile_id,caption_id",
