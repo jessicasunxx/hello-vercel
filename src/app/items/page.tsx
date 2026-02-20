@@ -19,11 +19,17 @@ async function checkTableAccessible(supabase: any, tableName: string) {
 async function fetchAllImages(supabase: any, userId: string | null) {
   // Fetch all images with captions - no pagination
   // The relationship is: captions.image_id -> images.id
+  // We'll filter captions in code to only show public ones with content
   const dataResult = await supabase
     .from("images")
     .select(`
       *,
-      captions(*)
+      captions(
+        id,
+        content,
+        is_public,
+        created_datetime_utc
+      )
     `)
     .order("created_datetime_utc", { ascending: false })
     .limit(MAX_IMAGES);
@@ -108,18 +114,21 @@ async function fetchAllImages(supabase: any, userId: string | null) {
     }
     
     allData = allData.map((image: any) => {
-      // Get the first caption (prefer public captions, or any caption)
-      let caption = null;
+      // Filter captions: only public ones with non-null, non-empty content
+      let validCaptions = [];
       if (Array.isArray(image.captions) && image.captions.length > 0) {
-        // Try to find a public caption first, otherwise use the first one
-        caption = image.captions.find((c: any) => c.is_public === true) || image.captions[0];
+        validCaptions = image.captions.filter((c: any) => 
+          c.is_public === true && 
+          c.content && 
+          c.content.trim() !== ''
+        );
       }
       
+      // Get the first valid caption (or null if none)
+      const caption = validCaptions.length > 0 ? validCaptions[0] : null;
+      
       // The caption text column is 'content' according to the schema
-      // Check if content exists and is not empty
-      const captionText = caption?.content && caption.content.trim() !== '' 
-        ? caption.content.trim() 
-        : null;
+      const captionText = caption?.content?.trim() || null;
       
       const captionId = caption?.id || null;
       const userVote = captionId ? userVotes[captionId] || null : null;
