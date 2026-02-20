@@ -31,6 +31,74 @@ async function fetchAllImages(supabase: any, userId: string | null) {
   let allData = dataResult.data as any[] | null;
   const error = dataResult.error;
   
+  // Debug: Analyze caption data
+  if (allData) {
+    const captionStats = {
+      totalImages: allData.length,
+      imagesWithAnyCaptions: 0,
+      imagesWithPublicCaptions: 0,
+      imagesWithPublicContent: 0,
+      totalCaptions: 0,
+      publicCaptions: 0,
+      captionsWithContent: 0,
+      publicCaptionsWithContent: 0,
+    };
+    
+    allData.forEach((image: any) => {
+      if (Array.isArray(image.captions) && image.captions.length > 0) {
+        captionStats.imagesWithAnyCaptions++;
+        captionStats.totalCaptions += image.captions.length;
+        
+        const hasPublic = image.captions.some((c: any) => c.is_public === true);
+        const hasPublicWithContent = image.captions.some((c: any) => 
+          c.is_public === true && c.content && c.content.trim() !== ''
+        );
+        
+        if (hasPublic) captionStats.imagesWithPublicCaptions++;
+        if (hasPublicWithContent) captionStats.imagesWithPublicContent++;
+        
+        image.captions.forEach((c: any) => {
+          if (c.is_public === true) captionStats.publicCaptions++;
+          if (c.content && c.content.trim() !== '') captionStats.captionsWithContent++;
+          if (c.is_public === true && c.content && c.content.trim() !== '') {
+            captionStats.publicCaptionsWithContent++;
+          }
+        });
+      }
+    });
+    
+    console.log("Caption Statistics:", captionStats);
+    
+    // Log a few sample images to see what's happening
+    const samplesWithoutCaptions = allData
+      .filter((img: any) => !Array.isArray(img.captions) || img.captions.length === 0)
+      .slice(0, 3);
+    if (samplesWithoutCaptions.length > 0) {
+      console.log("Sample images without captions:", samplesWithoutCaptions.map((img: any) => ({
+        id: img.id,
+        url: img.url?.substring(0, 50),
+        hasCaptionsArray: Array.isArray(img.captions),
+        captionsLength: img.captions?.length || 0,
+      })));
+    }
+    
+    const samplesWithCaptions = allData
+      .filter((img: any) => Array.isArray(img.captions) && img.captions.length > 0)
+      .slice(0, 3);
+    if (samplesWithCaptions.length > 0) {
+      console.log("Sample images with captions:", samplesWithCaptions.map((img: any) => ({
+        id: img.id,
+        captionCount: img.captions.length,
+        captions: img.captions.map((c: any) => ({
+          id: c.id,
+          is_public: c.is_public,
+          hasContent: !!c.content,
+          contentLength: c.content?.length || 0,
+        })),
+      })));
+    }
+  }
+  
   // Process the captions data
   if (allData) {
     // Get all caption IDs (from all captions for voting)
