@@ -1,21 +1,45 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { submitVote } from "@/lib/voteUtils";
+import { useRouter } from "next/navigation";
 
 interface ImageModalProps {
   image: {
     id: string;
     url: string;
     caption: string | null;
+    caption_id: string | null;
     created_datetime_utc?: string;
     is_public?: boolean;
     is_common_use?: boolean;
+    user_vote?: number | null;
+    vote_stats?: {
+      upvotes: number;
+      downvotes: number;
+      total: number;
+    };
   } | null;
   isOpen: boolean;
   onClose: () => void;
 }
 
 export default function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
+  const router = useRouter();
+  const [isVoting, setIsVoting] = useState(false);
+  const [userVote, setUserVote] = useState<number | null>(image?.user_vote ?? null);
+  const [voteStats, setVoteStats] = useState(
+    image?.vote_stats ?? { upvotes: 0, downvotes: 0, total: 0 }
+  );
+
+  // Update local state when image changes
+  useEffect(() => {
+    if (image) {
+      setUserVote(image.user_vote ?? null);
+      setVoteStats(image.vote_stats ?? { upvotes: 0, downvotes: 0, total: 0 });
+    }
+  }, [image]);
+
   // Close on Escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -34,6 +58,51 @@ export default function ImageModal({ image, isOpen, onClose }: ImageModalProps) 
       document.body.style.overflow = "unset";
     };
   }, [isOpen, onClose]);
+
+  const handleVote = async (vote: 1 | -1) => {
+    if (!image?.caption_id || isVoting) return;
+
+    setIsVoting(true);
+    try {
+      const result = await submitVote(image.caption_id, vote, userVote);
+
+      if (result.success) {
+        // Update local state optimistically
+        const newVote = userVote === vote ? null : vote; // Toggle if same vote
+        setUserVote(newVote);
+
+        // Update vote stats
+        let newStats = { ...voteStats };
+        if (userVote === 1) {
+          newStats.upvotes--;
+          newStats.total--;
+        } else if (userVote === -1) {
+          newStats.downvotes--;
+          newStats.total++;
+        }
+
+        if (newVote === 1) {
+          newStats.upvotes++;
+          newStats.total++;
+        } else if (newVote === -1) {
+          newStats.downvotes++;
+          newStats.total--;
+        }
+
+        setVoteStats(newStats);
+
+        // Refresh the page to get updated data from server
+        router.refresh();
+      } else {
+        console.error("Failed to submit vote:", result.error);
+        // Could show an error toast here
+      }
+    } catch (error) {
+      console.error("Error voting:", error);
+    } finally {
+      setIsVoting(false);
+    }
+  };
 
   if (!isOpen || !image) return null;
 
@@ -86,6 +155,71 @@ export default function ImageModal({ image, isOpen, onClose }: ImageModalProps) 
             <p className="text-lg font-medium text-zinc-400 dark:text-zinc-500 italic mb-4">
               No caption available
             </p>
+          )}
+
+          {/* Voting Section */}
+          {image.caption_id && (
+            <div className="mb-4 flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleVote(1)}
+                  disabled={isVoting}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                    userVote === 1
+                      ? "bg-emerald-500 text-white hover:bg-emerald-600"
+                      : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  aria-label="Upvote"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 15l7-7 7 7"
+                    />
+                  </svg>
+                  <span>{voteStats.upvotes}</span>
+                </button>
+                <button
+                  onClick={() => handleVote(-1)}
+                  disabled={isVoting}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                    userVote === -1
+                      ? "bg-red-500 text-white hover:bg-red-600"
+                      : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  aria-label="Downvote"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                  <span>{voteStats.downvotes}</span>
+                </button>
+              </div>
+              <div className="text-sm text-zinc-500 dark:text-zinc-400">
+                <span className="font-medium">
+                  {voteStats.total > 0 ? "+" : ""}
+                  {voteStats.total}
+                </span>
+                <span className="ml-1">total</span>
+              </div>
+            </div>
           )}
 
           {/* Footer Info */}

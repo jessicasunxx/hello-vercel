@@ -8,9 +8,16 @@ interface MemeCardProps {
     id: string;
     url: string;
     caption: string | null;
+    caption_id: string | null;
     created_datetime_utc?: string;
     is_public?: boolean;
     is_common_use?: boolean;
+    user_vote?: number | null;
+    vote_stats?: {
+      upvotes: number;
+      downvotes: number;
+      total: number;
+    };
   };
   index: number;
 }

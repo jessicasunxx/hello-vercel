@@ -16,7 +16,7 @@ async function checkTableAccessible(supabase: any, tableName: string) {
   return { tableName, error };
 }
 
-async function fetchAllImages(supabase: any) {
+async function fetchAllImages(supabase: any, userId: string | null) {
   // Fetch all images with captions - no pagination
   // The relationship is: captions.image_id -> images.id
   const dataResult = await supabase
@@ -33,6 +33,55 @@ async function fetchAllImages(supabase: any) {
   
   // Process the captions data
   if (allData) {
+    // Get all caption IDs
+    const captionIds = allData
+      .map((image: any) => {
+        const caption = Array.isArray(image.captions) && image.captions.length > 0
+          ? image.captions[0]
+          : null;
+        return caption?.id;
+      })
+      .filter((id: any) => id != null);
+    
+    // Fetch user's votes for all captions (if authenticated)
+    let userVotes: Record<string, number> = {};
+    if (userId && captionIds.length > 0) {
+      const votesResult = await supabase
+        .from("caption_votes")
+        .select("caption_id, vote")
+        .eq("profile_id", userId)
+        .in("caption_id", captionIds);
+      
+      if (votesResult.data) {
+        votesResult.data.forEach((vote: any) => {
+          userVotes[vote.caption_id] = vote.vote;
+        });
+      }
+    }
+    
+    // Fetch vote counts for all captions
+    let voteCounts: Record<string, { upvotes: number; downvotes: number; total: number }> = {};
+    if (captionIds.length > 0) {
+      const countsResult = await supabase
+        .from("caption_votes")
+        .select("caption_id, vote")
+        .in("caption_id", captionIds);
+      
+      if (countsResult.data) {
+        countsResult.data.forEach((vote: any) => {
+          if (!voteCounts[vote.caption_id]) {
+            voteCounts[vote.caption_id] = { upvotes: 0, downvotes: 0, total: 0 };
+          }
+          if (vote.vote === 1) {
+            voteCounts[vote.caption_id].upvotes++;
+          } else if (vote.vote === -1) {
+            voteCounts[vote.caption_id].downvotes++;
+          }
+          voteCounts[vote.caption_id].total += vote.vote;
+        });
+      }
+    }
+    
     allData = allData.map((image: any) => {
       // Get the first caption
       const caption = Array.isArray(image.captions) && image.captions.length > 0
@@ -47,10 +96,16 @@ async function fetchAllImages(supabase: any) {
         || caption?.body
         || null;
       
+      const captionId = caption?.id || null;
+      const userVote = captionId ? userVotes[captionId] || null : null;
+      const voteStats = captionId ? voteCounts[captionId] || { upvotes: 0, downvotes: 0, total: 0 } : { upvotes: 0, downvotes: 0, total: 0 };
+      
       return {
         ...image,
         caption: captionText,
-        caption_id: caption?.id || null,
+        caption_id: captionId,
+        user_vote: userVote,
+        vote_stats: voteStats,
         captions: undefined,
       };
     });
@@ -178,7 +233,7 @@ export default async function ItemsPage() {
   }
 
   // Fetch all images with captions
-  const result = await fetchAllImages(supabase);
+  const result = await fetchAllImages(supabase, user.id);
   const data = result.data;
   
   if (result.error) {
