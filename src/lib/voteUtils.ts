@@ -69,11 +69,42 @@ export async function submitVote(
     // The unique constraint on (profile_id, caption_id) ensures only one vote per user per caption
     console.log("Upserting vote:", { profile_id: user.id, caption_id: captionId, vote });
     
-    // Try common column name variations: 'vote', 'votes', 'value'
-    const columnNamesToTry = ['vote', 'votes', 'value', 'rating'];
+    // First, try to get ANY row from the table to detect the column name
+    let voteColumnName = 'vote';
+    const { data: anyRow, error: schemaError } = await supabase
+      .from("caption_votes")
+      .select("*")
+      .limit(1)
+      .maybeSingle();
+    
+    console.log("Any row from caption_votes:", anyRow);
+    console.log("Schema error (if any):", schemaError);
+    
+    if (anyRow && Object.keys(anyRow).length > 0) {
+      // Find the vote column by excluding known columns
+      const possibleColumns = Object.keys(anyRow).filter(key => 
+        key !== 'caption_id' && 
+        key !== 'profile_id' && 
+        key !== 'id' &&
+        key !== 'created_at' &&
+        key !== 'updated_at' &&
+        typeof anyRow[key] === 'number' // Vote should be a number
+      );
+      
+      if (possibleColumns.length > 0) {
+        voteColumnName = possibleColumns[0];
+        console.log("Detected vote column name:", voteColumnName);
+      } else {
+        console.log("Available columns:", Object.keys(anyRow));
+      }
+    }
+    
+    // Try the detected column name first, then common variations
+    const columnNamesToTry = [voteColumnName, 'vote', 'votes', 'value', 'rating'];
+    const uniqueColumnNames = [...new Set(columnNamesToTry)]; // Remove duplicates
     let lastError: any = null;
     
-    for (const columnName of columnNamesToTry) {
+    for (const columnName of uniqueColumnNames) {
       console.log(`Trying column name: ${columnName}`);
       const votePayload: any = {
         profile_id: user.id,
@@ -113,9 +144,19 @@ export async function submitVote(
 
     if (voteError) {
       console.error("Error submitting vote:", voteError);
+      const errorMessage = voteError.message || "Failed to submit vote";
+      
+      // Provide helpful error message if it's a column name issue
+      if (errorMessage.includes('column') || errorMessage.includes('schema cache')) {
+        return {
+          success: false,
+          error: `${errorMessage}. Please check your Supabase dashboard → Table Editor → caption_votes table to see what the vote column is actually named. Common names: 'vote', 'votes', 'value', 'rating'.`,
+        };
+      }
+      
       return {
         success: false,
-        error: voteError.message || "Failed to submit vote",
+        error: errorMessage,
       };
     }
 
