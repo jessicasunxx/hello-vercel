@@ -54,20 +54,10 @@ async function fetchAllImages(supabase: any, userId: string | null) {
         .in("caption_id", captionIds);
       
       if (votesResult.data && votesResult.data.length > 0) {
-        // Find the vote column name dynamically from first row
-        const firstRow = votesResult.data[0];
-        const voteColumnName = Object.keys(firstRow).find(key => 
-          (key.toLowerCase().includes('vote') || 
-           key.toLowerCase().includes('value') ||
-           key.toLowerCase().includes('rating')) &&
-          key !== 'caption_id' && 
-          key !== 'profile_id'
-        ) || 'vote';
-        
+        // Column name is 'vote_value' according to the schema
         votesResult.data.forEach((vote: any) => {
-          const voteValue = vote[voteColumnName];
-          if (voteValue !== undefined) {
-            userVotes[vote.caption_id] = voteValue;
+          if (vote.vote_value !== undefined) {
+            userVotes[vote.caption_id] = vote.vote_value;
           }
         });
       }
@@ -82,18 +72,9 @@ async function fetchAllImages(supabase: any, userId: string | null) {
         .in("caption_id", captionIds);
       
       if (countsResult.data && countsResult.data.length > 0) {
-        // Find the vote column name dynamically from first row
-        const firstRow = countsResult.data[0];
-        const voteColumnName = Object.keys(firstRow).find(key => 
-          (key.toLowerCase().includes('vote') || 
-           key.toLowerCase().includes('value') ||
-           key.toLowerCase().includes('rating')) &&
-          key !== 'caption_id' && 
-          key !== 'profile_id'
-        ) || 'vote';
-        
+        // Column name is 'vote_value' according to the schema
         countsResult.data.forEach((vote: any) => {
-          const voteValue = vote[voteColumnName];
+          const voteValue = vote.vote_value;
           if (voteValue !== undefined) {
             if (!voteCounts[vote.caption_id]) {
               voteCounts[vote.caption_id] = { upvotes: 0, downvotes: 0, total: 0 };
@@ -115,20 +96,8 @@ async function fetchAllImages(supabase: any, userId: string | null) {
         ? image.captions[0]
         : null;
       
-      // Try different possible column names for caption text
-      // Log the caption object to debug
-      if (caption && !caption.text && !caption.caption && !caption.caption_text && !caption.content && !caption.body) {
-        console.log("Caption object keys:", Object.keys(caption));
-        console.log("Caption object:", caption);
-      }
-      
-      const captionText = caption?.text 
-        || caption?.caption 
-        || caption?.caption_text 
-        || caption?.content 
-        || caption?.body
-        || caption?.description
-        || null;
+      // The caption text column is 'content' according to the schema
+      const captionText = caption?.content || null;
       
       const captionId = caption?.id || null;
       const userVote = captionId ? userVotes[captionId] || null : null;
