@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getSupabaseServerClient } from "@/lib/supabaseClient";
 import MemeCard from "./MemeCard";
 import SignOutButton from "./SignOutButton";
+import UploadForm from "./UploadForm";
 
 export const dynamic = "force-dynamic"; // Ensures fresh data on each request
 
@@ -105,7 +106,9 @@ async function fetchAllImages(supabase: any, userId: string | null) {
     const captionIds = allData
       .flatMap((image: any) => {
         if (Array.isArray(image.captions) && image.captions.length > 0) {
-          return image.captions.map((c: any) => c?.id).filter((id: any) => id != null);
+          return image.captions
+            .map((c: any) => c?.id)
+            .filter((id: any) => id != null);
         }
         return [];
       });
@@ -192,6 +195,15 @@ async function fetchAllImages(supabase: any, userId: string | null) {
         captions: undefined,
       };
     });
+
+    // Only keep images that have both a URL and a non-empty caption (prompt).
+    allData = allData.filter(
+      (image: any) =>
+        typeof image.url === "string" &&
+        image.url.trim() !== "" &&
+        typeof image.caption === "string" &&
+        image.caption.trim() !== ""
+    );
   }
   
   return { data: allData, error };
@@ -315,7 +327,7 @@ export default async function ItemsPage() {
     );
   }
 
-  // Fetch all images with captions
+  // Fetch all images with captions (filtered to image+prompt pairs)
   const result = await fetchAllImages(supabase, user.id);
   const data = result.data;
   
@@ -373,6 +385,9 @@ export default async function ItemsPage() {
             </div>
           </div>
         </div>
+
+        {/* Upload form */}
+        <UploadForm />
 
         {/* Grid - All memes displayed at once */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
