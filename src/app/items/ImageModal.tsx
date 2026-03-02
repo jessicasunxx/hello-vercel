@@ -134,17 +134,17 @@ export default function ImageModal({ image, isOpen, onClose, onVote }: ImageModa
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in duration-300"
       onClick={onClose}
     >
       <div
-        className="relative max-h-[90vh] w-full max-w-4xl bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+        className="relative max-h-[90vh] w-full max-w-4xl bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl rounded-3xl shadow-2xl shadow-purple-500/20 overflow-hidden flex flex-col border border-purple-200/20 dark:border-purple-800/30 animate-in zoom-in-95 duration-300"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 backdrop-blur-sm text-white flex items-center justify-center transition-colors"
+          className="absolute top-4 right-4 z-10 w-11 h-11 rounded-full bg-black/60 hover:bg-black/80 dark:bg-white/20 dark:hover:bg-white/30 backdrop-blur-md text-white dark:text-zinc-100 flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 shadow-lg ring-2 ring-white/20"
           aria-label="Close modal"
         >
           <svg
@@ -163,30 +163,30 @@ export default function ImageModal({ image, isOpen, onClose, onVote }: ImageModa
         </button>
 
         {/* Image */}
-        <div className="relative w-full flex-1 flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 min-h-0">
+        <div className="relative w-full flex-1 flex items-center justify-center bg-gradient-to-br from-purple-50 via-violet-50 to-fuchsia-50 dark:from-purple-950/30 dark:via-violet-950/30 dark:to-fuchsia-950/30 min-h-0">
           <img
             src={image.url}
             alt={image.caption || "Full size image"}
-            className="max-h-[70vh] w-auto h-auto object-contain"
+            className="max-h-[70vh] w-auto h-auto object-contain rounded-lg shadow-2xl"
           />
         </div>
 
         {/* Caption and Info */}
-        <div className="p-6 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+        <div className="p-8 border-t border-purple-100 dark:border-purple-900/50 bg-gradient-to-b from-white/95 to-white/90 dark:from-zinc-900/95 dark:to-zinc-900/90">
           {image.caption ? (
-            <p className="text-lg font-medium text-zinc-900 dark:text-zinc-100 mb-4">
+            <p className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-6 leading-relaxed bg-gradient-to-r from-purple-600 to-fuchsia-600 dark:from-purple-400 dark:to-fuchsia-400 bg-clip-text text-transparent">
               {image.caption}
             </p>
           ) : (
-            <p className="text-lg font-medium text-zinc-400 dark:text-zinc-500 italic mb-4">
+            <p className="text-xl font-medium text-zinc-400 dark:text-zinc-500 italic mb-6">
               No caption available
             </p>
           )}
 
           {/* Voting Section */}
           {image.caption_id ? (
-            <div className="mb-4 flex items-center gap-4">
-              <div className="flex items-center gap-2">
+            <div className="mb-6 flex items-center gap-4">
+              <div className="flex items-center gap-3">
                 <button
                   onClick={(e) => {
                     e.preventDefault();
@@ -194,11 +194,11 @@ export default function ImageModal({ image, isOpen, onClose, onVote }: ImageModa
                     handleVote(1);
                   }}
                   disabled={isVoting}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all duration-300 transform hover:scale-105 active:scale-95 ${
                     userVote === 1
-                      ? "bg-emerald-500 text-white hover:bg-emerald-600"
-                      : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
-                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+                      ? "bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700 shadow-lg shadow-emerald-500/30 ring-2 ring-emerald-400/50"
+                      : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 shadow-sm"
+                  } disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100`}
                   aria-label="Upvote"
                   type="button"
                 >
@@ -224,11 +224,11 @@ export default function ImageModal({ image, isOpen, onClose, onVote }: ImageModa
                     handleVote(-1);
                   }}
                   disabled={isVoting}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all duration-300 transform hover:scale-105 active:scale-95 ${
                     userVote === -1
-                      ? "bg-red-500 text-white hover:bg-red-600"
-                      : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
-                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+                      ? "bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700 shadow-lg shadow-red-500/30 ring-2 ring-red-400/50"
+                      : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 shadow-sm"
+                  } disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100`}
                   aria-label="Downvote"
                   type="button"
                 >
@@ -248,25 +248,25 @@ export default function ImageModal({ image, isOpen, onClose, onVote }: ImageModa
                   <span>{voteStats.downvotes}</span>
                 </button>
               </div>
-              <div className="text-sm text-zinc-500 dark:text-zinc-400">
-                <span className="font-medium">
+              <div className="text-sm font-bold text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 px-4 py-2 rounded-xl">
+                <span className="text-purple-600 dark:text-purple-400">
                   {voteStats.total > 0 ? "+" : ""}
                   {voteStats.total}
                 </span>
-                <span className="ml-1">total</span>
+                <span className="ml-2 text-zinc-500 dark:text-zinc-400 font-normal">total</span>
               </div>
             </div>
           ) : (
-            <div className="mb-4 text-sm text-zinc-500 dark:text-zinc-400">
+            <div className="mb-6 text-sm text-zinc-500 dark:text-zinc-400 font-medium">
               No caption available for voting
             </div>
           )}
 
           {/* Footer Info */}
-          <div className="flex items-center justify-between text-sm text-zinc-500 dark:text-zinc-400">
+          <div className="flex items-center justify-between pt-4 border-t border-purple-100 dark:border-purple-900/50">
             <div className="flex items-center gap-4">
               {image.created_datetime_utc && (
-                <span>
+                <span className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
                   {new Date(image.created_datetime_utc).toLocaleDateString("en-US", {
                     month: "long",
                     day: "numeric",
@@ -277,12 +277,12 @@ export default function ImageModal({ image, isOpen, onClose, onVote }: ImageModa
             </div>
             <div className="flex items-center gap-3">
               {image.is_public && (
-                <span className="px-3 py-1 bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 rounded-full text-xs font-semibold">
+                <span className="px-4 py-1.5 bg-emerald-500/20 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 rounded-full text-xs font-bold border border-emerald-300 dark:border-emerald-700">
                   Public
                 </span>
               )}
               {image.is_common_use && (
-                <span className="px-3 py-1 bg-blue-500/20 text-blue-700 dark:text-blue-400 rounded-full text-xs font-semibold">
+                <span className="px-4 py-1.5 bg-blue-500/20 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 rounded-full text-xs font-bold border border-blue-300 dark:border-blue-700">
                   Common
                 </span>
               )}
