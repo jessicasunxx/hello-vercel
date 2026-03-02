@@ -1,15 +1,5 @@
 const API_BASE_URL = "https://api.almostcrackd.ai";
 
-function getAuthToken() {
-  const token = process.env.NEXT_PUBLIC_ALMOSTCRACKD_JWT?.trim();
-  if (!token) {
-    throw new Error(
-      "Missing NEXT_PUBLIC_ALMOSTCRACKD_JWT. Please add your JWT access token to the environment."
-    );
-  }
-  return token;
-}
-
 type PresignedUrlResponse = {
   presignedUrl: string;
   cdnUrl: string;
@@ -21,9 +11,9 @@ type RegisterImageResponse = {
 };
 
 export async function generatePresignedUrl(
-  contentType: string
+  contentType: string,
+  token: string
 ): Promise<PresignedUrlResponse> {
-  const token = getAuthToken();
 
   const res = await fetch(`${API_BASE_URL}/pipeline/generate-presigned-url`, {
     method: "POST",
@@ -67,9 +57,9 @@ export async function uploadImageToPresignedUrl(
 }
 
 export async function registerImageUrl(
-  cdnUrl: string
+  cdnUrl: string,
+  token: string
 ): Promise<RegisterImageResponse> {
-  const token = getAuthToken();
 
   const res = await fetch(`${API_BASE_URL}/pipeline/upload-image-from-url`, {
     method: "POST",
@@ -93,8 +83,7 @@ export async function registerImageUrl(
   return (await res.json()) as RegisterImageResponse;
 }
 
-export async function generateCaptionsForImage(imageId: string) {
-  const token = getAuthToken();
+export async function generateCaptionsForImage(imageId: string, token: string) {
 
   const res = await fetch(`${API_BASE_URL}/pipeline/generate-captions`, {
     method: "POST",

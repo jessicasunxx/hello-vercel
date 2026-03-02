@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import {
   generatePresignedUrl,
   uploadImageToPresignedUrl,
@@ -24,6 +25,28 @@ export default function UploadForm() {
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [authToken, setAuthToken] = useState<string | null>(null);
+
+  // Get JWT token from Supabase auth session
+  useEffect(() => {
+    async function getToken() {
+      try {
+        const supabase = getSupabaseBrowserClient();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          setAuthToken(session.access_token);
+        } else {
+          setError("Please sign in to upload images.");
+        }
+      } catch (err) {
+        console.error("Error getting auth token:", err);
+        setError("Unable to get authentication token.");
+      }
+    }
+    getToken();
+  }, []);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setError(null);
@@ -54,22 +77,30 @@ export default function UploadForm() {
       return;
     }
 
+    if (!authToken) {
+      setError("Please sign in to upload images.");
+      return;
+    }
+
     setIsUploading(true);
     setError(null);
     setSuccessMessage(null);
 
     try {
       // Step 1: Generate presigned URL
-      const { presignedUrl, cdnUrl } = await generatePresignedUrl(file.type);
+      const { presignedUrl, cdnUrl } = await generatePresignedUrl(
+        file.type,
+        authToken
+      );
 
       // Step 2: Upload image bytes to presigned URL
       await uploadImageToPresignedUrl(presignedUrl, file);
 
       // Step 3: Register the uploaded image URL with the pipeline
-      const { imageId } = await registerImageUrl(cdnUrl);
+      const { imageId } = await registerImageUrl(cdnUrl, authToken);
 
       // Step 4: Generate captions
-      const captions = await generateCaptionsForImage(imageId);
+      const captions = await generateCaptionsForImage(imageId, authToken);
 
       setSuccessMessage("Image uploaded and captions generated successfully!");
 
@@ -109,7 +140,7 @@ export default function UploadForm() {
         />
         <button
           type="submit"
-          disabled={isUploading || !file}
+          disabled={isUploading || !file || !authToken}
           className="inline-flex items-center justify-center rounded-lg bg-black px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
         >
           {isUploading ? "Uploading..." : "Upload & Generate Captions"}
