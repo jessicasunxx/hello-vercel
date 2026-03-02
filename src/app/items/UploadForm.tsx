@@ -121,15 +121,15 @@ export default function UploadForm() {
   };
 
   return (
-    <section className="mb-12 rounded-3xl border border-purple-200/50 dark:border-purple-800/30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl p-8 shadow-xl hover:shadow-2xl hover:shadow-purple-500/10 transition-all duration-500 relative overflow-hidden">
+    <section className="mb-12 rounded-3xl border border-zinc-700/50 bg-zinc-900/80 backdrop-blur-xl p-8 shadow-xl hover:shadow-2xl hover:shadow-zinc-800/50 transition-all duration-500 relative overflow-hidden">
       {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-50/50 via-violet-50/30 to-fuchsia-50/50 dark:from-purple-950/20 dark:via-violet-950/20 dark:to-fuchsia-950/20 pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-br from-zinc-800/30 via-zinc-900/20 to-zinc-800/30 pointer-events-none" />
       
       <div className="relative z-10">
-        <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-fuchsia-600 dark:from-purple-400 dark:to-fuchsia-400 bg-clip-text text-transparent mb-2">
+        <h2 className="text-2xl font-bold bg-gradient-to-r from-zinc-100 to-zinc-300 bg-clip-text text-transparent mb-2">
           Upload a new meme and generate captions
         </h2>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-6 font-medium">
+        <p className="text-sm text-zinc-400 mb-6 font-medium">
           Choose an image to send to the caption pipeline. Once processing
           finishes, the new meme and its captions will appear in the gallery
           below.
@@ -140,12 +140,12 @@ export default function UploadForm() {
             type="file"
             accept={ALLOWED_TYPES.join(",")}
             onChange={handleFileChange}
-            className="block w-full text-sm text-zinc-700 dark:text-zinc-200 file:mr-4 file:rounded-xl file:border-0 file:bg-gradient-to-r file:from-purple-600 file:to-fuchsia-600 file:px-5 file:py-2.5 file:text-sm file:font-bold file:text-white hover:file:from-purple-700 hover:file:to-fuchsia-700 file:transition-all file:shadow-lg file:shadow-purple-500/30 dark:file:from-purple-500 dark:file:to-fuchsia-500 dark:hover:file:from-purple-400 dark:hover:file:to-fuchsia-400"
+            className="block w-full text-sm text-zinc-200 file:mr-4 file:rounded-xl file:border-0 file:bg-gradient-to-r file:from-zinc-700 file:to-zinc-800 file:px-5 file:py-2.5 file:text-sm file:font-bold file:text-white hover:file:from-zinc-600 hover:file:to-zinc-700 file:transition-all file:shadow-lg file:shadow-zinc-800/50"
           />
           <button
             type="submit"
             disabled={isUploading || !file || !authToken}
-            className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-700 hover:to-fuchsia-700 dark:from-purple-500 dark:to-fuchsia-500 dark:hover:from-purple-400 dark:hover:to-fuchsia-400 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/40 transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:shadow-lg transform hover:scale-105 active:scale-95"
+            className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-zinc-700 to-zinc-800 hover:from-zinc-600 hover:to-zinc-700 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-zinc-900/50 hover:shadow-xl hover:shadow-zinc-900/60 transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:shadow-lg transform hover:scale-105 active:scale-95"
           >
             {isUploading ? (
               <span className="flex items-center gap-2">
@@ -162,19 +162,19 @@ export default function UploadForm() {
         </form>
 
         {error && (
-          <div className="mt-4 p-3 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50">
-            <p className="text-sm text-red-600 dark:text-red-400 font-medium">{error}</p>
+          <div className="mt-4 p-3 rounded-xl bg-red-950/30 border border-red-800/50">
+            <p className="text-sm text-red-400 font-medium">{error}</p>
           </div>
         )}
         {successMessage && (
-          <div className="mt-4 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50">
-            <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">
+          <div className="mt-4 p-3 rounded-xl bg-emerald-950/30 border border-emerald-800/50">
+            <p className="text-sm text-emerald-400 font-medium">
               {successMessage}
             </p>
           </div>
         )}
 
-        <p className="mt-4 text-xs text-zinc-500 dark:text-zinc-400 font-medium">
+        <p className="mt-4 text-xs text-zinc-500 font-medium">
           Supported formats: JPEG, JPG, PNG, WEBP, GIF, HEIC.
         </p>
       </div>

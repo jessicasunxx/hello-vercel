@@ -35,16 +35,16 @@ export default function MemeCard({ image, index }: MemeCardProps) {
   return (
     <>
       <div
-        className="group relative bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border border-purple-200/50 dark:border-purple-800/30 rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl hover:shadow-purple-500/20 dark:hover:shadow-purple-500/10 transition-all duration-500 hover:-translate-y-2 cursor-pointer transform-gpu"
+        className="group relative bg-zinc-900/90 backdrop-blur-xl border border-zinc-700/50 rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl hover:shadow-zinc-800/50 transition-all duration-500 hover:-translate-y-2 cursor-pointer transform-gpu"
         style={{ animationDelay: `${index * 50}ms` }}
         onClick={() => setIsModalOpen(true)}
       >
         {/* Shimmer effect on hover */}
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 pointer-events-none" />
         
         {/* Image Container */}
         {image.url && (
-          <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-purple-100 via-violet-100 to-fuchsia-100 dark:from-purple-900/20 dark:via-violet-900/20 dark:to-fuchsia-900/20">
+          <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-zinc-800 to-zinc-900">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={image.url}
@@ -71,10 +71,10 @@ export default function MemeCard({ image, index }: MemeCardProps) {
         )}
 
         {/* Content */}
-        <div className="p-6 space-y-4 bg-gradient-to-b from-white/95 to-white/90 dark:from-zinc-900/95 dark:to-zinc-900/90">
+        <div className="p-6 space-y-4 bg-gradient-to-b from-zinc-900/95 to-zinc-900/90">
           {image.caption ? (
             <h3
-              className="text-sm font-bold text-zinc-900 dark:text-zinc-100 leading-relaxed group-hover:text-purple-700 dark:group-hover:text-purple-300 transition-colors duration-300"
+              className="text-sm font-bold text-zinc-100 leading-relaxed group-hover:text-white transition-colors duration-300"
               style={{
                 display: "-webkit-box",
                 WebkitLineClamp: 3,
@@ -85,15 +85,15 @@ export default function MemeCard({ image, index }: MemeCardProps) {
               {image.caption}
             </h3>
           ) : (
-            <h3 className="text-sm font-medium text-zinc-400 dark:text-zinc-500 italic">
+            <h3 className="text-sm font-medium text-zinc-500 italic">
               No caption available
             </h3>
           )}
 
           {/* Footer */}
-          <div className="flex items-center justify-between pt-3 border-t border-purple-100 dark:border-purple-900/50">
+          <div className="flex items-center justify-between pt-3 border-t border-zinc-700/50">
             {image.created_datetime_utc && (
-              <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+              <span className="text-xs font-medium text-zinc-400">
                 {new Date(image.created_datetime_utc).toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric",
@@ -113,7 +113,7 @@ export default function MemeCard({ image, index }: MemeCardProps) {
         </div>
 
         {/* Hover Glow Effect */}
-        <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-purple-500/0 via-violet-500/0 to-fuchsia-500/0 group-hover:from-purple-500/20 group-hover:via-violet-500/20 group-hover:to-fuchsia-500/20 transition-all duration-700 pointer-events-none blur-xl" />
+        <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-zinc-600/0 via-zinc-500/0 to-zinc-600/0 group-hover:from-zinc-600/10 group-hover:via-zinc-500/10 group-hover:to-zinc-600/10 transition-all duration-700 pointer-events-none blur-xl" />
       </div>
 
       {/* Modal */}

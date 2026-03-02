@@ -134,17 +134,17 @@ export default function ImageModal({ image, isOpen, onClose, onVote }: ImageModa
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in duration-300"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-md p-4 animate-in fade-in duration-300"
       onClick={onClose}
     >
       <div
-        className="relative max-h-[90vh] w-full max-w-4xl bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl rounded-3xl shadow-2xl shadow-purple-500/20 overflow-hidden flex flex-col border border-purple-200/20 dark:border-purple-800/30 animate-in zoom-in-95 duration-300"
+        className="relative max-h-[90vh] w-full max-w-4xl bg-zinc-900/95 backdrop-blur-xl rounded-3xl shadow-2xl shadow-black/50 overflow-hidden flex flex-col border border-zinc-700/50 animate-in zoom-in-95 duration-300"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 z-10 w-11 h-11 rounded-full bg-black/60 hover:bg-black/80 dark:bg-white/20 dark:hover:bg-white/30 backdrop-blur-md text-white dark:text-zinc-100 flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 shadow-lg ring-2 ring-white/20"
+          className="absolute top-4 right-4 z-10 w-11 h-11 rounded-full bg-zinc-800/80 hover:bg-zinc-700/80 backdrop-blur-md text-zinc-100 flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 shadow-lg ring-2 ring-zinc-700/50"
           aria-label="Close modal"
         >
           <svg
@@ -163,7 +163,7 @@ export default function ImageModal({ image, isOpen, onClose, onVote }: ImageModa
         </button>
 
         {/* Image */}
-        <div className="relative w-full flex-1 flex items-center justify-center bg-gradient-to-br from-purple-50 via-violet-50 to-fuchsia-50 dark:from-purple-950/30 dark:via-violet-950/30 dark:to-fuchsia-950/30 min-h-0">
+        <div className="relative w-full flex-1 flex items-center justify-center bg-gradient-to-br from-zinc-800 to-zinc-900 min-h-0">
           <img
             src={image.url}
             alt={image.caption || "Full size image"}
@@ -172,13 +172,13 @@ export default function ImageModal({ image, isOpen, onClose, onVote }: ImageModa
         </div>
 
         {/* Caption and Info */}
-        <div className="p-8 border-t border-purple-100 dark:border-purple-900/50 bg-gradient-to-b from-white/95 to-white/90 dark:from-zinc-900/95 dark:to-zinc-900/90">
+        <div className="p-8 border-t border-zinc-700/50 bg-gradient-to-b from-zinc-900/95 to-zinc-900/90">
           {image.caption ? (
-            <p className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-6 leading-relaxed bg-gradient-to-r from-purple-600 to-fuchsia-600 dark:from-purple-400 dark:to-fuchsia-400 bg-clip-text text-transparent">
+            <p className="text-xl font-bold text-zinc-100 mb-6 leading-relaxed bg-gradient-to-r from-zinc-100 to-zinc-300 bg-clip-text text-transparent">
               {image.caption}
             </p>
           ) : (
-            <p className="text-xl font-medium text-zinc-400 dark:text-zinc-500 italic mb-6">
+            <p className="text-xl font-medium text-zinc-500 italic mb-6">
               No caption available
             </p>
           )}
@@ -248,25 +248,25 @@ export default function ImageModal({ image, isOpen, onClose, onVote }: ImageModa
                   <span>{voteStats.downvotes}</span>
                 </button>
               </div>
-              <div className="text-sm font-bold text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 px-4 py-2 rounded-xl">
-                <span className="text-purple-600 dark:text-purple-400">
+              <div className="text-sm font-bold text-zinc-300 bg-zinc-800 px-4 py-2 rounded-xl">
+                <span className="text-zinc-100">
                   {voteStats.total > 0 ? "+" : ""}
                   {voteStats.total}
                 </span>
-                <span className="ml-2 text-zinc-500 dark:text-zinc-400 font-normal">total</span>
+                <span className="ml-2 text-zinc-400 font-normal">total</span>
               </div>
             </div>
           ) : (
-            <div className="mb-6 text-sm text-zinc-500 dark:text-zinc-400 font-medium">
+            <div className="mb-6 text-sm text-zinc-500 font-medium">
               No caption available for voting
             </div>
           )}
 
           {/* Footer Info */}
-          <div className="flex items-center justify-between pt-4 border-t border-purple-100 dark:border-purple-900/50">
+          <div className="flex items-center justify-between pt-4 border-t border-zinc-700/50">
             <div className="flex items-center gap-4">
               {image.created_datetime_utc && (
-                <span className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                <span className="text-sm font-medium text-zinc-400">
                   {new Date(image.created_datetime_utc).toLocaleDateString("en-US", {
                     month: "long",
                     day: "numeric",
@@ -277,12 +277,12 @@ export default function ImageModal({ image, isOpen, onClose, onVote }: ImageModa
             </div>
             <div className="flex items-center gap-3">
               {image.is_public && (
-                <span className="px-4 py-1.5 bg-emerald-500/20 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 rounded-full text-xs font-bold border border-emerald-300 dark:border-emerald-700">
+                <span className="px-4 py-1.5 bg-emerald-500/10 text-emerald-400 rounded-full text-xs font-bold border border-emerald-700">
                   Public
                 </span>
               )}
               {image.is_common_use && (
-                <span className="px-4 py-1.5 bg-blue-500/20 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 rounded-full text-xs font-bold border border-blue-300 dark:border-blue-700">
+                <span className="px-4 py-1.5 bg-blue-500/10 text-blue-400 rounded-full text-xs font-bold border border-blue-700">
                   Common
                 </span>
               )}

@@ -357,30 +357,30 @@ export default async function ItemsPage() {
 
   // Render all images in a grid - no pagination
   return (
-    <div className="min-h-screen bg-gradient-to-br from-violet-50 via-purple-50 to-fuchsia-50 dark:from-slate-950 dark:via-purple-950 dark:to-indigo-950 font-sans relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-black to-zinc-900 font-sans relative overflow-hidden">
       {/* Animated background elements */}
       <div className="fixed inset-0 -z-10 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-violet-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-fuchsia-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-zinc-800/30 rounded-full mix-blend-screen filter blur-xl opacity-40 animate-blob"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-zinc-700/20 rounded-full mix-blend-screen filter blur-xl opacity-30 animate-blob animation-delay-2000"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-zinc-800/20 rounded-full mix-blend-screen filter blur-xl opacity-30 animate-blob animation-delay-4000"></div>
       </div>
       
       <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative z-10">
         {/* Header */}
         <div className="mb-12">
-          <h1 className="text-6xl md:text-7xl font-extrabold bg-gradient-to-r from-purple-600 via-violet-600 to-fuchsia-600 dark:from-purple-400 dark:via-violet-400 dark:to-fuchsia-400 bg-clip-text text-transparent mb-4 tracking-tight">
+          <h1 className="text-6xl md:text-7xl font-extrabold bg-gradient-to-r from-zinc-100 via-zinc-300 to-zinc-100 bg-clip-text text-transparent mb-4 tracking-tight">
             Meme Gallery
           </h1>
           <div className="flex flex-wrap items-center gap-4 text-sm">
-            <span className="px-4 py-1.5 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border border-purple-200/50 dark:border-purple-800/50 rounded-full font-mono text-xs font-semibold text-purple-700 dark:text-purple-300 shadow-sm">
+            <span className="px-4 py-1.5 bg-zinc-900/80 backdrop-blur-md border border-zinc-700/50 rounded-full font-mono text-xs font-semibold text-zinc-300 shadow-sm">
               images
             </span>
-            <span className="text-purple-400 dark:text-purple-500">•</span>
-            <span className="font-semibold text-zinc-700 dark:text-zinc-300">
+            <span className="text-zinc-600">•</span>
+            <span className="font-semibold text-zinc-200">
               {data.length} meme{data.length !== 1 ? "s" : ""}
             </span>
-            <span className="text-purple-400 dark:text-purple-500">•</span>
-            <span className="text-xs text-zinc-600 dark:text-zinc-400 font-medium">
+            <span className="text-zinc-600">•</span>
+            <span className="text-xs text-zinc-400 font-medium">
               Signed in as {user.email}
             </span>
             <div className="ml-auto">
