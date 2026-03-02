@@ -164,23 +164,19 @@ async function fetchAllImages(supabase: any, userId: string | null) {
       // Get the first caption (for voting - we need caption_id)
       let caption = null;
       if (Array.isArray(image.captions) && image.captions.length > 0) {
-        // Prefer public captions with content, but fall back to any caption for voting
-        const publicCaptionWithContent = image.captions.find((c: any) => 
-          c.is_public === true && 
-          c.content && 
-          c.content.trim() !== ''
+        // Prefer any caption that actually has content, fall back to the first caption
+        const captionWithContent = image.captions.find(
+          (c: any) => c.content && c.content.trim() !== ""
         );
-        caption = publicCaptionWithContent || image.captions[0];
+        caption = captionWithContent || image.captions[0];
       }
       
-      // The caption text column is 'content' according to the schema
-      // Only show text if it's public and has content
-      const captionText = caption && 
-        caption.is_public === true && 
-        caption.content && 
-        caption.content.trim() !== ''
-        ? caption.content.trim() 
-        : null;
+      // The caption text column is 'content' according to the schema.
+      // For the gallery, we only care that there is non-empty text, regardless of is_public.
+      const captionText =
+        caption && caption.content && caption.content.trim() !== ""
+          ? caption.content.trim()
+          : null;
       
       const captionId = caption?.id || null;
       const userVote = captionId ? userVotes[captionId] || null : null;
