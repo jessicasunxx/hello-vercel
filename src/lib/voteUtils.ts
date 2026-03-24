@@ -65,26 +65,58 @@ export async function submitVote(
       return { success: true, error: null };
     }
 
-    // Otherwise, upsert the vote (insert or update if exists)
-    // The unique constraint on (profile_id, caption_id) ensures only one vote per user per caption
-    // The column name is 'vote_value' according to the schema
-    // created_datetime_utc is NOT NULL, so we need to provide it
-    console.log("Upserting vote:", { profile_id: user.id, caption_id: captionId, vote });
-    
-    const { error: voteError, data } = await supabase
+    // Otherwise, write a vote:
+    // - update existing row: only mutate vote + modified_by
+    // - insert new row: set both created_by and modified_by
+    // Datetime columns are managed by DB defaults/triggers.
+    console.log("Saving vote:", { profile_id: user.id, caption_id: captionId, vote });
+
+    const { data: existingVote, error: existingVoteError } = await supabase
       .from("caption_votes")
-      .upsert(
-        {
+      .select("id")
+      .eq("profile_id", user.id)
+      .eq("caption_id", captionId)
+      .maybeSingle();
+
+    if (existingVoteError) {
+      console.error("Error checking existing vote:", existingVoteError);
+      return {
+        success: false,
+        error: existingVoteError.message || "Failed to check existing vote",
+      };
+    }
+
+    let voteError: any = null;
+    let data: any = null;
+
+    if (existingVote) {
+      const updateResult = await supabase
+        .from("caption_votes")
+        .update({
+          vote_value: vote,
+          modified_by_user_id: user.id,
+        })
+        .eq("profile_id", user.id)
+        .eq("caption_id", captionId)
+        .select();
+
+      voteError = updateResult.error;
+      data = updateResult.data;
+    } else {
+      const insertResult = await supabase
+        .from("caption_votes")
+        .insert({
           profile_id: user.id,
           caption_id: captionId,
           vote_value: vote,
-          created_datetime_utc: new Date().toISOString(),
-        },
-        {
-          onConflict: "profile_id,caption_id",
-        }
-      )
-      .select();
+          created_by_user_id: user.id,
+          modified_by_user_id: user.id,
+        })
+        .select();
+
+      voteError = insertResult.error;
+      data = insertResult.data;
+    }
 
     console.log("Upsert result:", { voteError, data });
 
