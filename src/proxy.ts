@@ -1,8 +1,12 @@
-import { NextRequest, NextResponse } from "next/server";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { NextResponse, type NextRequest } from "next/server";
 
-export async function GET(request: NextRequest) {
-  const requestUrl = new URL(request.url);
+export async function proxy(request: NextRequest) {
+  let response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  });
 
   const url =
     process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ||
@@ -14,14 +18,8 @@ export async function GET(request: NextRequest) {
     "";
 
   if (!url || !anonKey) {
-    return NextResponse.redirect(new URL("/login", requestUrl.origin));
+    return response;
   }
-
-  // After successful sign-in, send users to the gated route.
-  const redirectPath = "/items";
-  const redirectUrl = new URL(redirectPath, requestUrl.origin);
-
-  const response = NextResponse.redirect(redirectUrl);
 
   const supabase = createServerClient(url, anonKey, {
     cookies: {
@@ -36,11 +34,13 @@ export async function GET(request: NextRequest) {
     },
   });
 
-  const code = requestUrl.searchParams.get("code");
-
-  if (code) {
-    await supabase.auth.exchangeCodeForSession(code);
-  }
+  await supabase.auth.getUser();
 
   return response;
 }
+
+export const config = {
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
+};

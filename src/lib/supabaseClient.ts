@@ -84,14 +84,18 @@ export async function getSupabaseServerClient() {
 
   const supabase = createServerClient(env.url, env.anonKey, {
     cookies: {
-      get(name: string) {
-        return cookieStore.get(name)?.value;
+      getAll() {
+        return cookieStore.getAll();
       },
-      set(name: string, value: string, options: CookieOptions) {
-        cookieStore.set({ name, value, ...options });
-      },
-      remove(name: string, options: CookieOptions) {
-        cookieStore.set({ name, value: "", ...options });
+      setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
+        try {
+          for (const { name, value, options } of cookiesToSet) {
+            cookieStore.set(name, value, options);
+          }
+        } catch {
+          // Next.js forbids mutating cookies during Server Component render.
+          // Session refresh is handled in proxy (see src/proxy.ts).
+        }
       },
     },
   });
