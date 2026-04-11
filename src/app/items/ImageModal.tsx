@@ -28,6 +28,7 @@ interface ImageModalProps {
 export default function ImageModal({ image, isOpen, onClose, onVote }: ImageModalProps) {
   const router = useRouter();
   const [isVoting, setIsVoting] = useState(false);
+  const [voteSavedFlash, setVoteSavedFlash] = useState(false);
   const [userVote, setUserVote] = useState<number | null>(image?.user_vote ?? null);
   const [voteStats, setVoteStats] = useState(
     image?.vote_stats ?? { upvotes: 0, downvotes: 0, total: 0 }
@@ -40,6 +41,12 @@ export default function ImageModal({ image, isOpen, onClose, onVote }: ImageModa
       setVoteStats(image.vote_stats ?? { upvotes: 0, downvotes: 0, total: 0 });
     }
   }, [image]);
+
+  useEffect(() => {
+    if (!voteSavedFlash) return;
+    const t = window.setTimeout(() => setVoteSavedFlash(false), 2500);
+    return () => window.clearTimeout(t);
+  }, [voteSavedFlash]);
 
   // Close on Escape key
   useEffect(() => {
@@ -102,6 +109,7 @@ export default function ImageModal({ image, isOpen, onClose, onVote }: ImageModa
         }
 
         setVoteStats(newStats);
+        setVoteSavedFlash(true);
 
         // Notify parent that a vote was submitted (this will trigger refresh)
         if (onVote) {
@@ -185,7 +193,28 @@ export default function ImageModal({ image, isOpen, onClose, onVote }: ImageModa
 
           {/* Voting Section */}
           {image.caption_id ? (
-            <div className="mb-6 flex items-center gap-4">
+            <div className="mb-6 space-y-3">
+              <p className="text-sm text-zinc-400">
+                Rank this caption: upvote or downvote. Your choice saves
+                automatically—you can close this window and your vote stays.
+              </p>
+              <div
+                className="sr-only"
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+              >
+                {voteSavedFlash ? "Vote saved." : ""}
+              </div>
+              {voteSavedFlash && (
+                <p
+                  className="text-sm font-semibold text-emerald-400"
+                  aria-hidden="true"
+                >
+                  Vote saved
+                </p>
+              )}
+              <div className="flex flex-wrap items-center gap-4">
               <div className="flex items-center gap-3">
                 <button
                   onClick={(e) => {
@@ -255,6 +284,7 @@ export default function ImageModal({ image, isOpen, onClose, onVote }: ImageModa
                 </span>
                 <span className="ml-2 text-zinc-400 font-normal">total</span>
               </div>
+            </div>
             </div>
           ) : (
             <div className="mb-6 text-sm text-zinc-500 font-medium">

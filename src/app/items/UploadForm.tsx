@@ -121,7 +121,10 @@ export default function UploadForm() {
   };
 
   return (
-    <section className="mb-12 rounded-3xl border border-zinc-700/50 bg-zinc-900/80 backdrop-blur-xl p-8 shadow-xl hover:shadow-2xl hover:shadow-zinc-800/50 transition-all duration-500 relative overflow-hidden">
+    <section
+      id="upload-section"
+      className="mb-12 scroll-mt-24 rounded-3xl border border-zinc-700/50 bg-zinc-900/80 backdrop-blur-xl p-8 shadow-xl hover:shadow-2xl hover:shadow-zinc-800/50 transition-all duration-500 relative overflow-hidden"
+    >
       {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-zinc-800/30 via-zinc-900/20 to-zinc-800/30 pointer-events-none" />
       

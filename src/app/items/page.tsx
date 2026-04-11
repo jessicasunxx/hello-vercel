@@ -238,13 +238,24 @@ export default async function ItemsPage() {
   if (!user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-        <main className="w-full max-w-3xl px-6 text-center space-y-6">
+        <main className="w-full max-w-lg px-6 text-center space-y-6">
+          <p className="text-xs text-zinc-500 dark:text-zinc-500">
+            <Link href="/" className="underline hover:text-zinc-700 dark:hover:text-zinc-300">
+              Home
+            </Link>
+            <span className="mx-2 text-zinc-400">/</span>
+            <span className="text-zinc-600 dark:text-zinc-400">Meme gallery</span>
+          </p>
           <h1 className="text-3xl font-bold text-black dark:text-zinc-50">
-            Meme Gallery is protected
+            Sign in required
           </h1>
           <p className="text-lg text-zinc-600 dark:text-zinc-400">
-            Please sign in with Google to view and interact with the meme
-            gallery.
+            Only signed-in users can open the gallery—so voting and uploads stay
+            tied to an account.
+          </p>
+          <p className="text-sm text-zinc-500 dark:text-zinc-500">
+            Next step: Google sign-in in your browser (you may leave this tab
+            briefly, then return to the gallery).
           </p>
           <div className="flex justify-center">
             <Link
@@ -366,26 +377,52 @@ export default async function ItemsPage() {
       </div>
       
       <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative z-10">
-        {/* Header */}
-        <div className="mb-12">
-          <h1 className="text-6xl md:text-7xl font-extrabold bg-gradient-to-r from-zinc-100 via-zinc-300 to-zinc-100 bg-clip-text text-transparent mb-4 tracking-tight">
-            Meme Gallery
-          </h1>
-          <div className="flex flex-wrap items-center gap-4 text-sm">
-            <span className="px-4 py-1.5 bg-zinc-900/80 backdrop-blur-md border border-zinc-700/50 rounded-full font-mono text-xs font-semibold text-zinc-300 shadow-sm">
-              images
-            </span>
-            <span className="text-zinc-600">•</span>
-            <span className="font-semibold text-zinc-200">
-              {data.length} meme{data.length !== 1 ? "s" : ""}
-            </span>
-            <span className="text-zinc-600">•</span>
-            <span className="text-xs text-zinc-400 font-medium">
-              Signed in as {user.email}
-            </span>
-            <div className="ml-auto">
-              <SignOutButton />
+        <nav
+          className="mb-4 text-xs text-zinc-500"
+          aria-label="Breadcrumb"
+        >
+          <Link
+            href="/"
+            className="underline hover:text-zinc-300 transition-colors"
+          >
+            Home
+          </Link>
+          <span className="mx-2 text-zinc-600">/</span>
+          <span className="text-zinc-400">Meme gallery</span>
+        </nav>
+
+        {/* Header + primary actions (feedback: upload/sign-out hard to spot) */}
+        <div className="mb-10 flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold bg-gradient-to-r from-zinc-100 via-zinc-300 to-zinc-100 bg-clip-text text-transparent tracking-tight">
+              Meme gallery
+            </h1>
+            <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
+              <span className="rounded-full border border-zinc-600 bg-zinc-900/80 px-3 py-1 text-xs font-medium text-zinc-300">
+                {data.length} meme{data.length !== 1 ? "s" : ""}
+              </span>
             </div>
+          </div>
+          <div className="flex flex-shrink-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center lg:justify-end">
+            <div
+              className="rounded-xl border border-emerald-800/60 bg-emerald-950/40 px-4 py-2 text-left shadow-sm"
+              role="status"
+              aria-live="polite"
+            >
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-500/90">
+                Signed in
+              </p>
+              <p className="truncate text-sm font-medium text-zinc-100 max-w-[220px] sm:max-w-[280px]">
+                {user.email}
+              </p>
+            </div>
+            <a
+              href="#upload-section"
+              className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-zinc-600 to-zinc-700 px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:from-zinc-500 hover:to-zinc-600"
+            >
+              Add a meme
+            </a>
+            <SignOutButton className="rounded-xl border-2 border-zinc-500 bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-zinc-100 shadow-md hover:bg-zinc-800" />
           </div>
         </div>
 

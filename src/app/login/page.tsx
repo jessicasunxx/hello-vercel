@@ -8,7 +8,12 @@ export default function LoginPage() {
           Sign in to continue
         </h1>
         <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-          Sign in with your Google account to access the protected content.
+          Sign in with your Google account to open the meme gallery (vote,
+          upload, and view captions).
+        </p>
+        <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-500 leading-relaxed">
+          After you tap the button, your browser will go to Google&apos;s sign-in
+          page. That is normal—you are not leaving the project permanently.
         </p>
         <div className="mt-6 flex justify-center">
           <LoginButton />
